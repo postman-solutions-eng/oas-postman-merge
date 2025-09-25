@@ -1,19 +1,15 @@
+
 {
   "name": "postman-merge-demo",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "merge": "node scripts/merge.js --config config/merge.config.yaml --working collections/working.json --refdir ref --out collections/working.merged.json",
+    "changelog": "node scripts/changelog.js --before collections/working.json --after collections/working.merged.json --out CHANGELOG.md"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "fast-deep-equal": "^3.1.3",
     "js-yaml": "^4.1.0",
     "postman-collection": "^5.2.0",
-    "yargs": "^18.0.0"
+    "yargs": "^17.7.2"
   }
 }

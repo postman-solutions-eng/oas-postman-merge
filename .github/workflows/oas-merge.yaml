@@ -1,11 +1,15 @@
-name: OAS → Working Collection (PR)
+name: OAS → Working Collection (PR + optional publish)
 
 on:
   push:
+    # Trigger on spec edits (to open/update PR)
+    # and on merges to main that change the merged artifacts (to publish)
+    branches:
+      - "**"
     paths:
-      - "openapi/**.yaml"
-      - "openapi/**.yml"
-      - "openapi/**.json"
+      - "openapi/**"
+      - "collections/working.json"
+      - "CHANGELOG.md"
   pull_request:
     paths:
       - "openapi/**"
@@ -20,15 +24,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node (with npm cache)
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install deps
         run: |
           npm ci || npm i
-          npm i -g openapi-to-postmanv2
+          npm i -g openapi-to-postmanv2@4.3.0
 
       - name: Build Reference collections
         run: |
@@ -59,11 +64,7 @@ jobs:
         with:
           commit-message: "OAS merge: update Working collection"
           title: "OAS merge: update Working collection"
-          body: |
-            Automated merge of spec changes into the curated Working collection.
-            See summary below.
-
-            $(cat CHANGELOG.md)
+          body-path: CHANGELOG.md
           branch: oas-merge/update-working
           add-paths: |
             collections/working.json
@@ -72,3 +73,27 @@ jobs:
       - name: Move merged file into place (for subsequent runs)
         run: |
           cp collections/working.merged.json collections/working.json
+
+  publish:
+    needs: merge
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install deps
+        run: npm ci || npm i
+      - name: Push merged Working back to Postman
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          WORKING_COLLECTION_UID: ${{ vars.WORKING_COLLECTION_UID }}
+        run: |
+          FILE="collections/working.json"
+          jq -n --argjson c "$(cat "$FILE")" '{collection:$c}' > payload.json
+          curl -sS -X PUT -H "X-Api-Key: $POSTMAN_API_KEY" -H "Content-Type: application/json" \
+            -d @payload.json "https://api.getpostman.com/collections/$WORKING_COLLECTION_UID" \
+            | jq -r '.'
