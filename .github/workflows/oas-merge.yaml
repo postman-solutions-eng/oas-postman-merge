@@ -2,7 +2,6 @@ name: OAS → Working Collection (PR + optional publish)
 
 on:
   push:
-    # Open/update PR when specs change; publish on merge to main
     branches:
       - "**"
     paths:
@@ -51,10 +50,13 @@ jobs:
             --refdir ref \
             --out collections/working.merged.json
 
-      # ✅ NEW: stage merged file BEFORE creating the PR
       - name: Copy merged over Working (stage for PR)
         run: |
           cp collections/working.merged.json collections/working.json
+
+      - name: Normalize for stable diffs
+        run: |
+          node scripts/normalize.js collections/working.json
 
       - name: Generate changelog
         run: |
@@ -100,16 +102,3 @@ jobs:
           curl -sS -X PUT -H "X-Api-Key: $POSTMAN_API_KEY" -H "Content-Type: application/json" \
             -d @payload.json "https://api.getpostman.com/collections/$WORKING_COLLECTION_UID" \
             | jq -r '.'
-
-      # (Optional) harden: verify it really updated in Postman
-      # - name: Verify collection updated in Postman
-      #   env:
-      #     POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-      #     WORKING_COLLECTION_UID: ${{ vars.WORKING_COLLECTION_UID }}
-      #   run: |
-      #     curl -s -H "X-Api-Key: $POSTMAN_API_KEY" "https://api.getpostman.com/collections/$WORKING_COLLECTION_UID" \
-      #       | tee live.json >/dev/null
-      #     echo "Check for share endpoint:"
-      #     jq -r '..|.request?.url?.path? // empty | join("/")' live.json | grep 'custom-views/.*/share'
-      #     echo "Check for _retired folder:"
-      #     jq -r '..|objects|select(has("name")).name' live.json | grep '^_retired$'

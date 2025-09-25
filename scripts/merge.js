@@ -1,34 +1,12 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
-/**
- * Postman Collection merge (Reference → Working), JSON-only (no SDK clone())
- *
- * What it does (per service in config):
- * - Builds a key map from the Reference (generated from OAS) and from the Working folder.
- * - Updates structural request fields (method, url, headers, body, spec text BELOW delimiter).
- * - Preserves human work:
- *   - item.auth (request-level), folder/collection auth
- *   - item.event[] (pre-request/tests)
- *   - item.name (configurable)
- *   - notes/doc links ABOVE a delimiter (default "\n---\n") in description
- *   - responses/examples (we never touch `response` array)
- * - Adds new endpoints (tags them as status:new) under the service folder.
- * - Moves removed endpoints into a `_retired` folder (idempotent).
- *
- * Input:
- *   --config  path to YAML config
- *   --working path to Working collection JSON
- *   --refdir  directory containing Reference collection JSONs (one per spec)
- *   --out     path to write merged Working collection JSON
- */
 
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-
-// --- robust yargs (CJS)
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
+
 const argv = yargs(hideBin(process.argv))
   .option('config',  { type: 'string', demandOption: true })
   .option('working', { type: 'string', demandOption: true })
@@ -37,39 +15,80 @@ const argv = yargs(hideBin(process.argv))
   .strict()
   .argv;
 
-// --------- utils
-const cfg = yaml.load(fs.readFileSync(argv.config, 'utf8'));
-const DELIM = cfg.options?.descriptionDelimiter || '\n---\n';
-const KEEP_NAME = !!cfg.options?.keepWorkingItemName;
-const TAG_NEW = cfg.options?.tagNew || 'status:new';
-const RETIRE_MODE = cfg.options?.retireMode || 'move';
-const ORDER = cfg.options?.order || 'keep';
-const PREFER_OPID = !!cfg.options?.preferOperationId;
+// --------- util
+const deepClone = (o) => JSON.parse(JSON.stringify(o || null));
+const asArray = (x) => Array.isArray(x) ? x : (x == null ? [] : [x]);
 
-// safe JSON read/write
-function readJSON(file) {
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-}
-function writeJSON(file, obj) {
-  fs.writeFileSync(file, JSON.stringify(obj, null, 2));
-}
-function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+function readJSON(p) { return JSON.parse(fs.readFileSync(p,'utf8')); }
+function writeJSON(p, j) { fs.writeFileSync(p, JSON.stringify(j, null, 2)); }
 
-// ensure arrays
-function ensureArray(obj, key) {
-  if (!obj[key]) obj[key] = [];
-  else if (!Array.isArray(obj[key])) obj[key] = [obj[key]];
-  return obj[key];
+function loadConfig(p) {
+  const txt = fs.readFileSync(p, 'utf8');
+  const doc = yaml.load(txt);
+  const defaults = {
+    options: {
+      preferOperationId: true,
+      keepWorkingItemName: true,
+      descriptionDelimiter: '\n---\n',
+      tagNew: 'status:new',
+      retireMode: 'move', // move | skip | delete
+      order: 'keep'       // keep | alpha
+    }
+  };
+  return { ...defaults, ...doc, options: { ...defaults.options, ...(doc.options || {}) } };
 }
 
-// find or create a folder by path of names
-function findOrCreateFolder(root, names) {
-  let node = root;
-  for (const seg of names) {
-    ensureArray(node, 'item');
-    let next = node.item.find(x => x && x.item && x.name === seg);
+// Normalize a URL to "/path/with/:vars" string for matching
+function getNormalizedPathFromUrl(urlLike) {
+  if (!urlLike) return '';
+  if (typeof urlLike === 'string') {
+    try {
+      // strip host if present
+      const u = new URL(urlLike, 'http://dummy');
+      return (u.pathname || '').replace(/\/+/g,'/').replace(/^\//,'');
+    } catch {
+      // treat it as /a/b form already
+      return urlLike.replace(/^\//,'');
+    }
+  }
+  const u = urlLike;
+  if (u.raw) {
+    const raw = u.raw;
+    const withoutProto = raw.replace(/^[a-z]+:\/\/[^/]+/i, '');
+    return withoutProto.replace(/^\//,'').split('?')[0];
+  }
+  const pathArr = Array.isArray(u.path) ? u.path : [];
+  return pathArr.join('/').replace(/^\//,'');
+}
+
+// Build a stable key for request matching
+function reqKey(item) {
+  const r = item.request || {};
+  const m = (r.method || 'GET').toUpperCase();
+  const p = getNormalizedPathFromUrl(r.url);
+  return `${m} ${p}`;
+}
+
+// Traverse collection tree
+function walkItems(coll, fn, trail = []) {
+  for (const it of asArray(coll.item)) {
+    if (it.item) {
+      walkItems(it, fn, trail.concat(it.name || ''));
+    } else {
+      fn(it, trail);
+    }
+  }
+}
+
+// Find or create a folder path under a parent item/collection
+function ensureFolder(parent, segments) {
+  let node = parent;
+  for (const seg of segments) {
+    if (!seg) continue;
+    let next = (node.item || []).find(x => x.item && x.name === seg);
     if (!next) {
       next = { name: seg, item: [] };
+      node.item = node.item || [];
       node.item.push(next);
     }
     node = next;
@@ -77,239 +96,248 @@ function findOrCreateFolder(root, names) {
   return node;
 }
 
-// flatten requests under a node; skip `_retired` unless includeRetired=true
-function flattenRequests(root, includeRetired = false) {
-  const acc = [];
-  function walk(node, parent=null, parentIdx=-1, pathTrail=[]) {
-    const items = Array.isArray(node?.item) ? node.item : [];
-    for (let i=0; i<items.length; i++) {
-      const it = items[i];
-      if (it && it.item) {
-        if (!includeRetired && it.name === '_retired') continue;
-        walk(it, node, i, pathTrail.concat([it.name]));
-      } else if (it && it.request) {
-        acc.push({ item: it, parent: node, index: i, pathTrail });
-      }
-    }
-  }
-  walk(root);
-  return acc;
-}
+// Description helpers
+let DELIM = '\n---\n';
+let KEEP_NAME = true;
 
-// get description as string (supports string or {content,type})
-function getDescString(desc) {
-  if (!desc) return '';
-  if (typeof desc === 'string') return desc;
-  if (typeof desc === 'object' && typeof desc.content === 'string') return desc.content;
+function getDescString(obj) {
+  const d = obj && obj.description;
+  if (!d) return '';
+  if (typeof d === 'string') return d;
+  if (typeof d === 'object' && typeof d.content === 'string') return d.content;
   return '';
 }
-function setDescString(targetReq, newText, preferObjectFrom) {
-  // set description respecting original format
-  const orig = preferObjectFrom?.description ?? targetReq?.description;
-  if (orig && typeof orig === 'object' && 'content' in orig) {
-    targetReq.description = { content: newText, type: orig.type || 'text/plain' };
+function setDescString(targetReq, text, oldReqForType) {
+  // Keep same type/shape as old if possible, else use {content,type}
+  if (oldReqForType && oldReqForType.description && typeof oldReqForType.description === 'object') {
+    targetReq.description = { content: text, type: 'text/plain' };
   } else {
-    targetReq.description = newText;
+    targetReq.description = text;
   }
 }
+
 function mergeDescriptionPreserveTop(oldReq, refReq) {
-  const oldText = getDescString(oldReq?.description);
-  const refText = getDescString(refReq?.description);
-  const idx = oldText.indexOf(DELIM);
-  const top = idx >= 0 ? oldText.slice(0, idx) : oldText; // human notes
-  const merged = (top || '').replace(/\s+$/, '') + (DELIM + (refText || ''));
-  return merged;
+  const a = getDescString(oldReq) || '';
+  const b = getDescString(refReq) || '';
+  const [headsA] = a.split(DELIM);
+  const [, tailB = ''] = b.split(DELIM);
+  const head = headsA && headsA.trim().length ? headsA : '';
+  const tail = tailB && tailB.trim().length ? tailB : (b && b.trim().length ? b : '');
+  return head && tail ? `${head}${DELIM}${tail}` : (head || tail || '');
 }
 
-// normalize path key like "/sites/:siteId/custom-views"
-function getNormalizedPathFromUrl(url) {
-  if (!url) return '';
-  if (typeof url === 'string') {
-    // try to strip protocol/host/query
-    const raw = url.split('://').pop();
-    const p = raw.split('?')[0];
-    const slashIdx = p.indexOf('/');
-    return slashIdx >= 0 ? p.slice(slashIdx) : '/' + p;
-  }
-  if (Array.isArray(url.path)) {
-    return '/' + url.path.join('/').replace(/\/+/g, '/').replace(/\/$/, '');
-  }
-  if (typeof url.raw === 'string') {
-    return getNormalizedPathFromUrl(url.raw);
-  }
-  return '';
-}
-
-// extract best-available identity key
-function getItemKey(it) {
-  const method = (it.request?.method || '').toUpperCase();
-  let opId = null;
-
-  if (PREFER_OPID) {
-    // try to infer from description text "operationId: xyz"
-    const desc = getDescString(it.request?.description);
-    const m = desc.match(/operationId:\s*([A-Za-z0-9_.-]+)/);
-    opId = m ? m[1] : null;
-  }
-
-  if (PREFER_OPID && opId) {
-    return `opId:${opId}`;
-  }
-  const normPath = getNormalizedPathFromUrl(it.request?.url);
-  return `mp:${method} ${normPath}`;
-}
-
-// build map key -> { item, parent, index }
-function buildMap(root, includeRetired=false) {
-  const entries = flattenRequests(root, includeRetired);
-  const map = new Map();
-  for (const e of entries) {
-    const key = getItemKey(e.item);
-    if (!key) continue;
-    // last one wins; keys should be unique per collection
-    map.set(key, e);
-  }
-  return map;
-}
-
-// merge headers; keep variableized values from old ({{var}}) if same key exists
+// Headers (preserve {{var}} values from old where keys match)
 function mergeHeadersPreserveVars(newReq, oldReq) {
-  const oldHeaders = Array.isArray(oldReq?.header) ? oldReq.header : [];
-  const newHeaders = Array.isArray(newReq?.header) ? newReq.header : [];
-
-  const oldMap = new Map(oldHeaders.map(h => [String(h.key || '').toLowerCase(), h]));
-  for (const h of newHeaders) {
-    const k = String(h.key || '').toLowerCase();
-    const old = oldMap.get(k);
-    if (old && typeof old.value === 'string' && /\{\{.+\}\}/.test(old.value)) {
-      h.value = old.value; // keep variableized value
-    }
+  const oldH = {};
+  if (Array.isArray(oldReq.header)) {
+    for (const h of oldReq.header) oldH[String(h.key || '').toLowerCase()] = h;
   }
+  if (!Array.isArray(newReq.header)) return;
+  newReq.header = newReq.header.map(h => {
+    const key = String(h.key || '').toLowerCase();
+    const old = oldH[key];
+    if (!old) return h;
+    const isVar = typeof (old.value || '') === 'string' && /\{\{.+\}\}/.test(old.value);
+    if (isVar) return { ...h, value: old.value };
+    return h;
+  });
 }
 
-// update structural request fields from ref → target, preserving human work
+// URL merge: keep old shape, update path/query/vars
+function mergeUrlPreserveShape(targetReq, refReq) {
+  const oldUrl = targetReq.url;
+  const newUrl = deepClone(refReq.url);
+
+  if (!oldUrl) { targetReq.url = newUrl; return; }
+
+  if (typeof oldUrl === 'string') {
+    const want = getNormalizedPathFromUrl(newUrl);
+    const have = getNormalizedPathFromUrl(oldUrl);
+    if (want && have && want === have) {
+      targetReq.url = oldUrl; // keep string
+    } else {
+      targetReq.url = newUrl?.raw || (`${(newUrl.host||[]).join('')}/${(newUrl.path||[]).join('/')}`.replace(/\/+/g,'/'));
+    }
+    return;
+  }
+
+  // object shape
+  const o = deepClone(oldUrl);
+  const n = newUrl || {};
+
+  // path
+  if (Array.isArray(o.path)) {
+    if (Array.isArray(n.path)) o.path = n.path;
+    else if (typeof n.raw === 'string') o.path = n.raw.split('?')[0].replace(/^[^/]*:\/\//,'').split('/').slice(1);
+  } else if (typeof o.path === 'string') {
+    if (Array.isArray(n.path)) o.path = n.path.join('/');
+    else if (typeof n.raw === 'string') o.path = n.raw.split('?')[0].replace(/^[^/]*:\/\//,'').split('/').slice(1).join('/');
+  }
+
+  // host (only if ref has one)
+  if (Array.isArray(n.host) && n.host.length) o.host = n.host;
+
+  // variables & query
+  if (Array.isArray(n.variable)) o.variable = n.variable;
+  if (Array.isArray(n.query)) o.query = n.query.slice().sort((a,b)=>String(a.key).localeCompare(String(b.key)));
+
+  // raw: keep if existed; otherwise omit to avoid churn
+  if ('raw' in o && n.raw) o.raw = n.raw;
+
+  targetReq.url = o;
+}
+
+// Structural updater (DO NOT clobber entire request)
 function updateStructural(targetItem, refItem) {
-  const oldReq = targetItem.request || {};
+  targetItem.request = targetItem.request || {};
+  const oldReq = targetItem.request;
   const refReq = refItem.request || {};
-  const newReq = deepClone(refReq);
+  const nextReq = deepClone(refReq);
 
-  // description: keep human notes above DELIM, refresh spec text below
+  // method
+  targetItem.request.method = (refReq.method || oldReq.method || 'GET').toUpperCase();
+
+  // description: preserve head, refresh tail
   const mergedDesc = mergeDescriptionPreserveTop(oldReq, refReq);
-  setDescString(newReq, mergedDesc, oldReq);
+  setDescString(targetItem.request, mergedDesc, oldReq);
 
-  // headers: keep {{var}} values from old where keys match
-  mergeHeadersPreserveVars(newReq, oldReq);
+  // headers
+  mergeHeadersPreserveVars(nextReq, oldReq);
+  if (Array.isArray(nextReq.header)) {
+    nextReq.header.sort((a,b)=>String(a.key||'').toLowerCase().localeCompare(String(b.key||'').toLowerCase()));
+  }
+  targetItem.request.header = nextReq.header ?? targetItem.request.header;
 
-  // body: if old used variables in raw body, keep it
+  // body: keep old raw with variables intact
   if (oldReq?.body?.mode === 'raw' && typeof oldReq.body.raw === 'string' && /\{\{.+\}\}/.test(oldReq.body.raw)) {
-    newReq.body = oldReq.body;
+    targetItem.request.body = oldReq.body;
+  } else {
+    targetItem.request.body = nextReq.body ?? targetItem.request.body;
   }
 
-  // never carry over request-level auth from ref (we preserve item-level auth separately)
-  if (newReq.auth !== undefined) delete newReq.auth;
-
-  // apply
-  targetItem.request = newReq;
-
-  // preserve sacred fields at the item level
-  if (KEEP_NAME && targetItem.name) {
-    // keep existing name; else adopt ref name
-  } else if (refItem.name) {
-    targetItem.name = refItem.name;
+  // never import request-level auth from ref; preserve item's own .auth
+  if ('auth' in targetItem.request) {
+    // keep as-is (collection-level or item-level)
   }
-  // preserve item-level auth, events, variables, and responses (we don't touch them)
-  // nothing to do: we never reassigned those properties
+
+  // URL: merge with shape preservation
+  mergeUrlPreserveShape(targetItem.request, nextReq);
+
+  // name: keep working name unless config says otherwise
+  if (!KEEP_NAME && refItem.name) targetItem.name = refItem.name;
+
+  // we intentionally do NOT touch:
+  // - item.event[]
+  // - item.response[]
+  // - item.variable[]
+  // - item.auth (at item level)
 }
 
-// add a brand-new item (deep clone), annotate as new
-function addNewItem(destFolder, refItem) {
-  ensureArray(destFolder, 'item');
-  const clone = deepClone(refItem);
-  clone.protocolProfileBehavior = Object.assign({}, clone.protocolProfileBehavior, { 'x-status': TAG_NEW });
-  destFolder.item.push(clone);
+function alphaOrderFolders(node) {
+  if (!node || !Array.isArray(node.item)) return;
+  node.item.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  for (const it of node.item) alphaOrderFolders(it);
 }
 
-// move an item to `_retired` under destFolder (idempotent)
-function retireItem(destFolder, e) {
-  const retired = findOrCreateFolder(destFolder, ['_retired']);
-  // remove from current parent (if still present there)
-  if (e.parent && Array.isArray(e.parent.item)) {
-    const existing = e.parent.item[e.index];
-    if (existing === e.item) {
-      e.parent.item.splice(e.index, 1);
-    }
-  }
-  // don't duplicate in retired
-  ensureArray(retired, 'item');
-  if (!retired.item.includes(e.item)) {
-    retired.item.push(e.item);
-  }
-}
+// --------- main merge logic
+function main() {
+  const cfg = loadConfig(argv.config);
+  DELIM = cfg.options.descriptionDelimiter || DELIM;
+  KEEP_NAME = !!cfg.options.keepWorkingItemName;
 
-// sort items in a folder alphabetically by name (optional)
-function sortFolderAlpha(folder) {
-  if (!Array.isArray(folder.item)) return;
-  folder.item.sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
-  for (const it of folder.item) {
-    if (it && it.item) sortFolderAlpha(it);
-  }
-}
-
-// ------------- main
-(function main() {
   const working = readJSON(argv.working);
-  ensureArray(working, 'item');
 
-  let totalAdded = 0, totalUpdated = 0, totalRetired = 0;
+  // Build a map of existing requests by key
+  const workMap = new Map();
+  const workByKeyToRef = new Map(); // folder path → array of items at that path (for placement)
+  walkItems(working, (it, trail) => {
+    workMap.set(reqKey(it), it);
+    const key = trail.join(' / ');
+    if (!workByKeyToRef.has(key)) workByKeyToRef.set(key, []);
+    workByKeyToRef.get(key).push(it);
+  });
+
+  let updated = 0, added = 0, retired = 0;
 
   for (const svc of (cfg.services || [])) {
-    const specBase = path.basename(svc.spec, path.extname(svc.spec));
-    const refFile = path.join(argv.refdir, `${specBase}.postman_collection.json`);
-    if (!fs.existsSync(refFile)) {
-      console.warn(`[warn] Reference file not found for service "${svc.name}": ${refFile}`);
+    // load the reference collection produced by openapi2postmanv2
+    const specFile = path.basename(svc.spec, path.extname(svc.spec));
+    const refPath = path.join(argv.refdir, `${specFile}.postman_collection.json`);
+    if (!fs.existsSync(refPath)) {
+      console.error(`Reference not found for ${svc.name}: ${refPath}`);
       continue;
     }
+    const ref = readJSON(refPath);
 
-    const ref = readJSON(refFile);
-    ensureArray(ref, 'item');
+    // find subtree in working where to apply changes
+    const targetParent = ensureFolder(working, asArray(svc.workingFolder || []));
 
-    // destination working folder for this service
-    const dest = findOrCreateFolder(working, svc.workingFolder || []);
-    ensureArray(dest, 'item');
-
-    // build maps
-    const wkMap = buildMap(dest /* working subtree */, /* includeRetired */ false);
-    const refMap = buildMap(ref, /* includeRetired */ true);
-
-    // updates & adds
-    for (const [key, refEntry] of refMap.entries()) {
-      const wkEntry = wkMap.get(key);
-      if (wkEntry) {
-        updateStructural(wkEntry.item, refEntry.item);
-        totalUpdated++;
+    // iterate ref requests
+    const seenKeys = new Set();
+    walkItems(ref, (rit, rtrail) => {
+      const k = reqKey(rit);
+      if (!k.trim()) return;
+      seenKeys.add(k);
+      const existing = workMap.get(k);
+      if (existing) {
+        updateStructural(existing, rit);
+        updated++;
       } else {
-        addNewItem(dest, refEntry.item);
-        totalAdded++;
-      }
-    }
-
-    // retire removed
-    for (const [key, wkEntry] of wkMap.entries()) {
-      if (!refMap.has(key)) {
-        if (RETIRE_MODE === 'tag') {
-          wkEntry.item.protocolProfileBehavior = Object.assign({}, wkEntry.item.protocolProfileBehavior, { 'x-status': 'status:deprecated' });
-        } else {
-          retireItem(dest, wkEntry);
+        // add new request under an equivalent folder path if possible
+        const parent = ensureFolder(targetParent, rtrail);
+        const clone = deepClone(rit);
+        // tag new if requested
+        if (cfg.options.tagNew) {
+          clone.protocolProfileBehavior = clone.protocolProfileBehavior || {};
+          clone.protocolProfileBehavior['x-status'] = cfg.options.tagNew;
         }
-        totalRetired++;
+        parent.item = parent.item || [];
+        parent.item.push(clone);
+        // update workMap so later steps see it
+        workMap.set(k, clone);
+        added++;
       }
-    }
+    });
 
-    // optional ordering
-    if (ORDER === 'alpha') sortFolderAlpha(dest);
+    // retire requests that are in working but not in ref
+    if (cfg.options.retireMode !== 'skip') {
+      const retiredFolder = ensureFolder(targetParent, ['_retired']);
+      // collect candidates only under this service subtree
+      function retireWalk(node) {
+        for (const it of asArray(node.item)) {
+          if (it.item) {
+            if (it.name !== '_retired') retireWalk(it);
+          } else {
+            const k = reqKey(it);
+            if (k && !seenKeys.has(k)) {
+              // move or delete
+              if (cfg.options.retireMode === 'delete') {
+                // remove by marking and filtering later
+                it.__DELETE_ME__ = true;
+              } else {
+                // move to _retired if not already there
+                if (node !== retiredFolder) {
+                  retiredFolder.item = retiredFolder.item || [];
+                  retiredFolder.item.push(it);
+                  it.__MOVED__ = true;
+                }
+              }
+              retired++;
+            }
+          }
+        }
+        // filter deletes
+        node.item = asArray(node.item).filter(x => !x.__DELETE_ME__);
+      }
+      retireWalk(targetParent);
+    }
   }
+
+  if (cfg.options.order === 'alpha') alphaOrderFolders(working);
 
   writeJSON(argv.out, working);
   console.log(`Merged → ${argv.out}`);
-  console.log(`Updated: ${totalUpdated}  •  Added: ${totalAdded}  •  Retired: ${totalRetired}`);
-})();
+  console.log(`Updated: ${updated}  •  Added: ${added}  •  Retired: ${retired}`);
+}
+
+main();
