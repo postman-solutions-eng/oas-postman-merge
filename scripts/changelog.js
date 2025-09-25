@@ -8,72 +8,97 @@ const argv = yargs(hideBin(process.argv))
   .option('before', { type: 'string', demandOption: true })
   .option('after',  { type: 'string', demandOption: true })
   .option('out',    { type: 'string', demandOption: true })
-  .strict()
-  .argv;
+  .strict().argv;
 
-// flatten requests, with control over retired handling
-function flatten(coll, { skipRetired=false, onlyRetired=false } = {}, trail = [], rows = []) {
-  for (const it of (coll.item || [])) {
-    if (it.item) {
-      const isRetired = it.name === '_retired';
-      if (onlyRetired && !isRetired) {
-        flatten(it, { skipRetired, onlyRetired }, trail.concat([it.name]), rows);
-        continue;
-      }
-      if (skipRetired && isRetired) continue;
-      if (!onlyRetired) flatten(it, { skipRetired, onlyRetired }, trail.concat([it.name]), rows);
-      if (onlyRetired && isRetired) flatten(it, { skipRetired, onlyRetired }, trail.concat([it.name]), rows);
-    } else if (it.request) {
-      const method = (it.request.method || '').toUpperCase();
-      const url = (() => {
-        const u = it.request.url || {};
-        if (typeof u === 'string') return u;
-        if (u.raw) return u.raw;
-        const host = Array.isArray(u.host) ? u.host.join('') : (u.host || '');
-        const path = Array.isArray(u.path) ? u.path.join('/') : (u.path || '');
-        return `${host}/${path}`.replace(/\/+/g, '/');
-      })();
-      rows.push({ name: it.name, path: trail.join(' / '), method, url });
+function asArray(x){return Array.isArray(x)?x:(x==null?[]:[x]);}
+
+function normPath(url) {
+  if (!url) return '';
+  if (typeof url === 'string') {
+    try {
+      const u = new URL(url, 'http://dummy');
+      return (u.pathname||'').replace(/\/+/g,'/').replace(/\/$/,'');
+    } catch {
+      return `/${url.replace(/^\//,'')}`.replace(/\/+/g,'/');
     }
   }
-  return rows;
-}
-const key = x => `${x.method} ${x.url}`.trim().toUpperCase();
-
-const before = JSON.parse(fs.readFileSync(argv.before, 'utf8'));
-const after  = JSON.parse(fs.readFileSync(argv.after,  'utf8'));
-
-const beforeRows  = flatten(before, { skipRetired: true });
-const afterRows   = flatten(after,  { skipRetired: true });
-const retiredRows = flatten(after,  { onlyRetired: true });
-
-const bMap = new Map(beforeRows.map(x => [key(x), x]));
-const aMap = new Map(afterRows.map(x => [key(x), x]));
-const rMap = new Map(retiredRows.map(x => [key(x), x]));
-
-const added = [];
-const retired = [];
-
-// Added = in AFTER (non-retired) but not in BEFORE
-for (const [k, v] of aMap) if (!bMap.has(k)) added.push(v);
-
-// Retired = in BEFORE but not in AFTER (non-retired) AND present under _retired in AFTER
-for (const [k, v] of bMap) {
-  if (!aMap.has(k) && rMap.has(k)) retired.push(v);
+  const raw = url.raw;
+  if (raw) {
+    const p = raw.replace(/^[a-z]+:\/\/[^/]+/i,'').split('?')[0];
+    return (p || '').replace(/\/+/g,'/').replace(/\/$/,'');
+  }
+  const host = Array.isArray(url.host) ? url.host.join('') : '';
+  const path = Array.isArray(url.path) ? url.path.join('/') : '';
+  const p = `${host ? '' : ''}/${path}`; // keep only path
+  return p.replace(/\/+/g,'/').replace(/\/$/,'');
 }
 
-let md = `## Collection Changes\n\n`;
-if (added.length) {
-  md += `### Added\n`;
-  for (const x of added) md += `- ${x.method} ${x.url} — **${x.name}** (${x.path})\n`;
-  md += `\n`;
+function collect(coll) {
+  const out = new Map();
+  function walk(node, trail=[]) {
+    for (const it of asArray(node.item)) {
+      if (it.item) walk(it, trail.concat(it.name||''));
+      else {
+        const r = it.request || {};
+        const k = `${(r.method||'GET').toUpperCase()} ${normPath(r.url)}`;
+        out.set(k, {item: it, trail});
+      }
+    }
+  }
+  walk(coll);
+  return out;
 }
-if (retired.length) {
-  md += `### Retired (not deleted)\n`;
-  for (const x of retired) md += `- ${x.method} ${x.url} — **${x.name}** (${x.path})\n`;
-  md += `\n`;
-}
-if (!added.length && !retired.length) md += `No structural changes.\n`;
 
-fs.writeFileSync(argv.out, md);
-console.log(`Wrote ${argv.out}`);
+function prettyName(entry) {
+  const it = entry.item;
+  const r = it.request || {};
+  const path = normPath(r.url).replace(/^\//,'');
+  const name = it.name || (r && r.url && r.url?.path?.slice?.(-1)?.[0]) || path.split('/').slice(-1)[0] || '';
+  return { method: (r.method||'GET').toUpperCase(), path, name, folder: entry.trail.join(' / ') };
+}
+
+function lineAdded(pn) {
+  return `- ${pn.method} {{baseUrl}}/${pn.path.replace(/^\//,'')} — **${pn.name}** (${pn.folder || ''})`;
+}
+
+function lineRetired(pn) {
+  return `- ${pn.method} {{baseUrl}}/${pn.path.replace(/^\//,'')} — **${pn.name}** (${pn.folder || ''})`;
+}
+
+function main() {
+  const before = JSON.parse(fs.readFileSync(argv.before, 'utf8'));
+  const after  = JSON.parse(fs.readFileSync(argv.after,  'utf8'));
+
+  const b = collect(before);
+  const a = collect(after);
+
+  const added = [];
+  const retired = [];
+
+  for (const [k, v] of a.entries()) {
+    if (!b.has(k)) added.push(prettyName(v));
+  }
+  for (const [k, v] of b.entries()) {
+    if (!a.has(k)) retired.push(prettyName(v));
+  }
+
+  let md = '## Collection Changes\n\n';
+  if (added.length) {
+    md += '### Added\n';
+    for (const pn of added) md += lineAdded(pn) + '\n';
+    md += '\n';
+  }
+  if (retired.length) {
+    md += '### Retired (not deleted)\n';
+    for (const pn of retired) md += lineRetired(pn) + '\n';
+    md += '\n';
+  }
+  if (!added.length && !retired.length) {
+    md += 'No structural changes.\n';
+  }
+
+  fs.writeFileSync(argv.out, md);
+  console.log(`Wrote ${argv.out}`);
+}
+
+main();
