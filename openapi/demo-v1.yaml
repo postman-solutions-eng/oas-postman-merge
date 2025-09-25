@@ -1,0 +1,26 @@
+openapi: 3.0.3
+info: { title: Demo API, version: 1.0.0 }
+servers: [{ url: https://api.example.com }]
+paths:
+  /sites/{siteId}/custom-views:
+    get:
+      operationId: listCustomViews
+      parameters:
+        - in: path   # required path param
+          name: siteId
+          required: true
+          schema: { type: string }
+        - in: query  # optional query param
+          name: pageSize
+          required: false
+          schema: { type: integer, default: 100 }
+      responses: { "200": { description: ok } }
+  /sites/{siteId}/legacyTokens:
+    delete:
+      operationId: deleteLegacyToken
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string }
+      responses: { "204": { description: deleted } }

@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# local environment/secrets
+.env
+*.env
+.env.local
+
+# generated reference collections (can always regenerate from specs)
+ref/
+
+# merged artifact (only commit collections/working.json, not tmp outputs)
+collections/working.merged.json
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# editor cruft
+*.swp
+*.swo
+.idea/
+.vscode/

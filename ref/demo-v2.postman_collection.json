@@ -1,0 +1,262 @@
+{
+    "item": [
+        {
+            "name": "sites",
+            "description": "",
+            "item": [
+                {
+                    "name": "{siteId}",
+                    "description": "",
+                    "item": [
+                        {
+                            "name": "custom-views",
+                            "description": "",
+                            "item": [
+                                {
+                                    "id": "5534ec4f-df2a-40a3-b2db-d6c9c1606c70",
+                                    "name": "list Custom Views",
+                                    "request": {
+                                        "name": "list Custom Views",
+                                        "description": {},
+                                        "url": {
+                                            "path": [
+                                                "sites",
+                                                ":siteId",
+                                                "custom-views"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [
+                                                {
+                                                    "disabled": false,
+                                                    "description": {
+                                                        "content": "",
+                                                        "type": "text/plain"
+                                                    },
+                                                    "key": "pageSize",
+                                                    "value": "100"
+                                                },
+                                                {
+                                                    "disabled": false,
+                                                    "description": {
+                                                        "content": "",
+                                                        "type": "text/plain"
+                                                    },
+                                                    "key": "includeSubsites",
+                                                    "value": "<boolean>"
+                                                }
+                                            ],
+                                            "variable": [
+                                                {
+                                                    "type": "any",
+                                                    "value": "<string>",
+                                                    "key": "siteId",
+                                                    "disabled": false,
+                                                    "description": {
+                                                        "content": "(Required) ",
+                                                        "type": "text/plain"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "method": "GET",
+                                        "body": {},
+                                        "auth": null
+                                    },
+                                    "response": [
+                                        {
+                                            "id": "81cb8cba-1815-486e-9c93-0b5036532d6e",
+                                            "name": "ok",
+                                            "originalRequest": {
+                                                "url": {
+                                                    "path": [
+                                                        "sites",
+                                                        ":siteId",
+                                                        "custom-views"
+                                                    ],
+                                                    "host": [
+                                                        "{{baseUrl}}"
+                                                    ],
+                                                    "query": [
+                                                        {
+                                                            "disabled": false,
+                                                            "description": {
+                                                                "content": "",
+                                                                "type": "text/plain"
+                                                            },
+                                                            "key": "pageSize",
+                                                            "value": "100"
+                                                        },
+                                                        {
+                                                            "disabled": false,
+                                                            "description": {
+                                                                "content": "",
+                                                                "type": "text/plain"
+                                                            },
+                                                            "key": "includeSubsites",
+                                                            "value": "<boolean>"
+                                                        }
+                                                    ],
+                                                    "variable": []
+                                                },
+                                                "method": "GET",
+                                                "body": {}
+                                            },
+                                            "status": "OK",
+                                            "code": 200,
+                                            "header": [],
+                                            "cookie": [],
+                                            "_postman_previewlanguage": "text"
+                                        }
+                                    ],
+                                    "event": [],
+                                    "protocolProfileBehavior": {
+                                        "disableBodyPruning": true
+                                    }
+                                },
+                                {
+                                    "name": "{customViewId}",
+                                    "description": "",
+                                    "item": [
+                                        {
+                                            "name": "share",
+                                            "description": "",
+                                            "item": [
+                                                {
+                                                    "id": "ca95359c-50e1-4d45-92e2-b36f337dcb22",
+                                                    "name": "share Custom View",
+                                                    "request": {
+                                                        "name": "share Custom View",
+                                                        "description": {},
+                                                        "url": {
+                                                            "path": [
+                                                                "sites",
+                                                                ":siteId",
+                                                                "custom-views",
+                                                                ":customViewId",
+                                                                "share"
+                                                            ],
+                                                            "host": [
+                                                                "{{baseUrl}}"
+                                                            ],
+                                                            "query": [],
+                                                            "variable": [
+                                                                {
+                                                                    "type": "any",
+                                                                    "value": "<string>",
+                                                                    "key": "siteId",
+                                                                    "disabled": false,
+                                                                    "description": {
+                                                                        "content": "(Required) ",
+                                                                        "type": "text/plain"
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "type": "any",
+                                                                    "value": "<string>",
+                                                                    "key": "customViewId",
+                                                                    "disabled": false,
+                                                                    "description": {
+                                                                        "content": "(Required) ",
+                                                                        "type": "text/plain"
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        "header": [
+                                                            {
+                                                                "key": "Content-Type",
+                                                                "value": "application/json"
+                                                            }
+                                                        ],
+                                                        "method": "POST",
+                                                        "body": {
+                                                            "mode": "raw",
+                                                            "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}",
+                                                            "options": {
+                                                                "raw": {
+                                                                    "headerFamily": "json",
+                                                                    "language": "json"
+                                                                }
+                                                            }
+                                                        },
+                                                        "auth": null
+                                                    },
+                                                    "response": [
+                                                        {
+                                                            "id": "10e68194-fa0c-4ec2-867c-ef54e96a80aa",
+                                                            "name": "shared",
+                                                            "originalRequest": {
+                                                                "url": {
+                                                                    "path": [
+                                                                        "sites",
+                                                                        ":siteId",
+                                                                        "custom-views",
+                                                                        ":customViewId",
+                                                                        "share"
+                                                                    ],
+                                                                    "host": [
+                                                                        "{{baseUrl}}"
+                                                                    ],
+                                                                    "query": [],
+                                                                    "variable": []
+                                                                },
+                                                                "header": [
+                                                                    {
+                                                                        "key": "Content-Type",
+                                                                        "value": "application/json"
+                                                                    }
+                                                                ],
+                                                                "method": "POST",
+                                                                "body": {
+                                                                    "mode": "raw",
+                                                                    "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}",
+                                                                    "options": {
+                                                                        "raw": {
+                                                                            "headerFamily": "json",
+                                                                            "language": "json"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "status": "No Content",
+                                                            "code": 204,
+                                                            "header": [],
+                                                            "cookie": [],
+                                                            "_postman_previewlanguage": "text"
+                                                        }
+                                                    ],
+                                                    "event": [],
+                                                    "protocolProfileBehavior": {
+                                                        "disableBodyPruning": true
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "event": [],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "https://api.example.com"
+        }
+    ],
+    "info": {
+        "_postman_id": "ddb824b2-69b6-484a-a6fd-dc9c1e689a9b",
+        "name": "Demo API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": {
+            "content": "",
+            "type": "text/plain"
+        }
+    }
+}

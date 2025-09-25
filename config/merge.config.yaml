@@ -1,0 +1,12 @@
+# config/merge.config.yaml
+services:
+  - name: "Demo"
+    spec: "openapi/demo-v2.yaml"
+    workingFolder: []          # root level (your tree starts with "sites")
+options:
+  preferOperationId: true
+  keepWorkingItemName: true
+  descriptionDelimiter: "\n---\n"
+  tagNew: "status:new"
+  retireMode: "move"
+  order: "keep"
