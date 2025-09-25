@@ -1,0 +1,74 @@
+name: OAS → Working Collection (PR)
+
+on:
+  push:
+    paths:
+      - "openapi/**.yaml"
+      - "openapi/**.yml"
+      - "openapi/**.json"
+  pull_request:
+    paths:
+      - "openapi/**"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm ci || npm i
+          npm i -g openapi-to-postmanv2
+
+      - name: Build Reference collections
+        run: |
+          mkdir -p ref
+          for f in openapi/*.*; do
+            base=$(basename "$f")
+            out="ref/${base%.*}.postman_collection.json"
+            openapi2postmanv2 -s "$f" -o "$out" -p
+          done
+
+      - name: Merge Reference → Working
+        run: |
+          node scripts/merge.js \
+            --config config/merge.config.yaml \
+            --working collections/working.json \
+            --refdir ref \
+            --out collections/working.merged.json
+
+      - name: Generate changelog
+        run: |
+          node scripts/changelog.js \
+            --before collections/working.json \
+            --after  collections/working.merged.json \
+            --out CHANGELOG.md
+
+      - name: Commit and open/update PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "OAS merge: update Working collection"
+          title: "OAS merge: update Working collection"
+          body: |
+            Automated merge of spec changes into the curated Working collection.
+            See summary below.
+
+            $(cat CHANGELOG.md)
+          branch: oas-merge/update-working
+          add-paths: |
+            collections/working.json
+            CHANGELOG.md
+
+      - name: Move merged file into place (for subsequent runs)
+        run: |
+          cp collections/working.merged.json collections/working.json
