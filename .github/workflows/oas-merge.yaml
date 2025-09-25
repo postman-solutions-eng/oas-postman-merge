@@ -51,12 +51,15 @@ jobs:
             --out collections/working.merged.json
 
       - name: Copy merged over Working (stage for PR)
-        run: |
-          cp collections/working.merged.json collections/working.json
+        run: cp collections/working.merged.json collections/working.json
 
       - name: Normalize for stable diffs
+        run: node scripts/normalize.js collections/working.json
+
+      - name: Canonical JSON key order (global, stable)
         run: |
-          node scripts/normalize.js collections/working.json
+          jq -S . collections/working.json > collections/working.sorted.json
+          mv collections/working.sorted.json collections/working.json
 
       - name: Generate changelog
         run: |

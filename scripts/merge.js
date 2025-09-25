@@ -15,17 +15,18 @@ const argv = yargs(hideBin(process.argv))
   .strict()
   .argv;
 
-// --------- util
+// ---------- utils
 const deepClone = (o) => JSON.parse(JSON.stringify(o || null));
 const asArray = (x) => Array.isArray(x) ? x : (x == null ? [] : [x]);
 
-function readJSON(p) { return JSON.parse(fs.readFileSync(p,'utf8')); }
+function readJSON(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
 function writeJSON(p, j) { fs.writeFileSync(p, JSON.stringify(j, null, 2)); }
 
 function loadConfig(p) {
   const txt = fs.readFileSync(p, 'utf8');
-  const doc = yaml.load(txt);
+  const doc = yaml.load(txt) || {};
   const defaults = {
+    services: [],
     options: {
       preferOperationId: true,
       keepWorkingItemName: true,
@@ -38,27 +39,24 @@ function loadConfig(p) {
   return { ...defaults, ...doc, options: { ...defaults.options, ...(doc.options || {}) } };
 }
 
-// Normalize a URL to "/path/with/:vars" string for matching
+// Normalize a URL to "path/with/:vars" (no leading slash)
 function getNormalizedPathFromUrl(urlLike) {
   if (!urlLike) return '';
   if (typeof urlLike === 'string') {
     try {
-      // strip host if present
       const u = new URL(urlLike, 'http://dummy');
-      return (u.pathname || '').replace(/\/+/g,'/').replace(/^\//,'');
+      return (u.pathname || '').replace(/^\//, '');
     } catch {
-      // treat it as /a/b form already
-      return urlLike.replace(/^\//,'');
+      return urlLike.replace(/^\//, '');
     }
   }
   const u = urlLike;
   if (u.raw) {
-    const raw = u.raw;
-    const withoutProto = raw.replace(/^[a-z]+:\/\/[^/]+/i, '');
-    return withoutProto.replace(/^\//,'').split('?')[0];
+    const raw = u.raw.replace(/^[a-z]+:\/\/[^/]+/i, '');
+    return raw.replace(/^\//, '').split('?')[0];
   }
   const pathArr = Array.isArray(u.path) ? u.path : [];
-  return pathArr.join('/').replace(/^\//,'');
+  return pathArr.join('/').replace(/^\//, '');
 }
 
 // Build a stable key for request matching
@@ -69,26 +67,23 @@ function reqKey(item) {
   return `${m} ${p}`;
 }
 
-// Traverse collection tree
-function walkItems(coll, fn, trail = []) {
-  for (const it of asArray(coll.item)) {
-    if (it.item) {
-      walkItems(it, fn, trail.concat(it.name || ''));
-    } else {
-      fn(it, trail);
-    }
+// Walk collection items
+function walkItems(node, fn, trail = []) {
+  for (const it of asArray(node.item)) {
+    if (it && it.item) walkItems(it, fn, trail.concat(it.name || ''));
+    else if (it) fn(it, trail);
   }
 }
 
-// Find or create a folder path under a parent item/collection
+// Ensure (or create) a folder path
 function ensureFolder(parent, segments) {
   let node = parent;
-  for (const seg of segments) {
+  node.item = node.item || [];
+  for (const seg of segments || []) {
     if (!seg) continue;
-    let next = (node.item || []).find(x => x.item && x.name === seg);
+    let next = node.item.find(x => x.item && x.name === seg);
     if (!next) {
       next = { name: seg, item: [] };
-      node.item = node.item || [];
       node.item.push(next);
     }
     node = next;
@@ -96,7 +91,7 @@ function ensureFolder(parent, segments) {
   return node;
 }
 
-// Description helpers
+// ----- description handling
 let DELIM = '\n---\n';
 let KEEP_NAME = true;
 
@@ -107,9 +102,10 @@ function getDescString(obj) {
   if (typeof d === 'object' && typeof d.content === 'string') return d.content;
   return '';
 }
-function setDescString(targetReq, text, oldReqForType) {
-  // Keep same type/shape as old if possible, else use {content,type}
-  if (oldReqForType && oldReqForType.description && typeof oldReqForType.description === 'object') {
+
+function setDescString(targetReq, text, oldReq) {
+  // Keep shape: if old had {content,type}, keep that; otherwise plain string
+  if (oldReq && typeof oldReq.description === 'object') {
     targetReq.description = { content: text, type: 'text/plain' };
   } else {
     targetReq.description = text;
@@ -119,14 +115,14 @@ function setDescString(targetReq, text, oldReqForType) {
 function mergeDescriptionPreserveTop(oldReq, refReq) {
   const a = getDescString(oldReq) || '';
   const b = getDescString(refReq) || '';
-  const [headsA] = a.split(DELIM);
+  const [headA] = a.split(DELIM);
   const [, tailB = ''] = b.split(DELIM);
-  const head = headsA && headsA.trim().length ? headsA : '';
-  const tail = tailB && tailB.trim().length ? tailB : (b && b.trim().length ? b : '');
+  const head = headA && headA.trim() ? headA : '';
+  const tail = tailB && tailB.trim() ? tailB : (b && b.trim() ? b : '');
   return head && tail ? `${head}${DELIM}${tail}` : (head || tail || '');
 }
 
-// Headers (preserve {{var}} values from old where keys match)
+// Headers: preserve {{var}} values from old where keys match
 function mergeHeadersPreserveVars(newReq, oldReq) {
   const oldH = {};
   if (Array.isArray(oldReq.header)) {
@@ -137,13 +133,12 @@ function mergeHeadersPreserveVars(newReq, oldReq) {
     const key = String(h.key || '').toLowerCase();
     const old = oldH[key];
     if (!old) return h;
-    const isVar = typeof (old.value || '') === 'string' && /\{\{.+\}\}/.test(old.value);
-    if (isVar) return { ...h, value: old.value };
-    return h;
+    const isVar = typeof old.value === 'string' && /\{\{.+\}\}/.test(old.value);
+    return isVar ? { ...h, value: old.value } : h;
   });
 }
 
-// URL merge: keep old shape, update path/query/vars
+// URL: preserve old shape, update path/query/vars
 function mergeUrlPreserveShape(targetReq, refReq) {
   const oldUrl = targetReq.url;
   const newUrl = deepClone(refReq.url);
@@ -153,11 +148,9 @@ function mergeUrlPreserveShape(targetReq, refReq) {
   if (typeof oldUrl === 'string') {
     const want = getNormalizedPathFromUrl(newUrl);
     const have = getNormalizedPathFromUrl(oldUrl);
-    if (want && have && want === have) {
-      targetReq.url = oldUrl; // keep string
-    } else {
-      targetReq.url = newUrl?.raw || (`${(newUrl.host||[]).join('')}/${(newUrl.path||[]).join('/')}`.replace(/\/+/g,'/'));
-    }
+    targetReq.url = (want && have && want === have)
+      ? oldUrl
+      : (newUrl?.raw || (`${(newUrl.host||[]).join('')}/${(newUrl.path||[]).join('/')}`.replace(/\/+/g,'/')));
     return;
   }
 
@@ -174,20 +167,20 @@ function mergeUrlPreserveShape(targetReq, refReq) {
     else if (typeof n.raw === 'string') o.path = n.raw.split('?')[0].replace(/^[^/]*:\/\//,'').split('/').slice(1).join('/');
   }
 
-  // host (only if ref has one)
+  // host
   if (Array.isArray(n.host) && n.host.length) o.host = n.host;
 
   // variables & query
   if (Array.isArray(n.variable)) o.variable = n.variable;
   if (Array.isArray(n.query)) o.query = n.query.slice().sort((a,b)=>String(a.key).localeCompare(String(b.key)));
 
-  // raw: keep if existed; otherwise omit to avoid churn
+  // raw: keep if existed; else omit to avoid churn
   if ('raw' in o && n.raw) o.raw = n.raw;
 
   targetReq.url = o;
 }
 
-// Structural updater (DO NOT clobber entire request)
+// Structural update without clobbering request
 function updateStructural(targetItem, refItem) {
   targetItem.request = targetItem.request || {};
   const oldReq = targetItem.request;
@@ -197,7 +190,7 @@ function updateStructural(targetItem, refItem) {
   // method
   targetItem.request.method = (refReq.method || oldReq.method || 'GET').toUpperCase();
 
-  // description: preserve head, refresh tail
+  // description
   const mergedDesc = mergeDescriptionPreserveTop(oldReq, refReq);
   setDescString(targetItem.request, mergedDesc, oldReq);
 
@@ -208,29 +201,20 @@ function updateStructural(targetItem, refItem) {
   }
   targetItem.request.header = nextReq.header ?? targetItem.request.header;
 
-  // body: keep old raw with variables intact
+  // body
   if (oldReq?.body?.mode === 'raw' && typeof oldReq.body.raw === 'string' && /\{\{.+\}\}/.test(oldReq.body.raw)) {
     targetItem.request.body = oldReq.body;
   } else {
     targetItem.request.body = nextReq.body ?? targetItem.request.body;
   }
 
-  // never import request-level auth from ref; preserve item's own .auth
-  if ('auth' in targetItem.request) {
-    // keep as-is (collection-level or item-level)
-  }
+  // request-level auth: do not import from ref; keep item/collection auth as-is
 
-  // URL: merge with shape preservation
+  // URL
   mergeUrlPreserveShape(targetItem.request, nextReq);
 
-  // name: keep working name unless config says otherwise
+  // name
   if (!KEEP_NAME && refItem.name) targetItem.name = refItem.name;
-
-  // we intentionally do NOT touch:
-  // - item.event[]
-  // - item.response[]
-  // - item.variable[]
-  // - item.auth (at item level)
 }
 
 function alphaOrderFolders(node) {
@@ -239,7 +223,7 @@ function alphaOrderFolders(node) {
   for (const it of node.item) alphaOrderFolders(it);
 }
 
-// --------- main merge logic
+// ------------- main
 function main() {
   const cfg = loadConfig(argv.config);
   DELIM = cfg.options.descriptionDelimiter || DELIM;
@@ -247,89 +231,72 @@ function main() {
 
   const working = readJSON(argv.working);
 
-  // Build a map of existing requests by key
+  // map existing requests
   const workMap = new Map();
-  const workByKeyToRef = new Map(); // folder path → array of items at that path (for placement)
-  walkItems(working, (it, trail) => {
-    workMap.set(reqKey(it), it);
-    const key = trail.join(' / ');
-    if (!workByKeyToRef.has(key)) workByKeyToRef.set(key, []);
-    workByKeyToRef.get(key).push(it);
-  });
+  walkItems(working, (it) => workMap.set(reqKey(it), it));
 
   let updated = 0, added = 0, retired = 0;
 
   for (const svc of (cfg.services || [])) {
-    // load the reference collection produced by openapi2postmanv2
-    const specFile = path.basename(svc.spec, path.extname(svc.spec));
-    const refPath = path.join(argv.refdir, `${specFile}.postman_collection.json`);
-    if (!fs.existsSync(refPath)) {
-      console.error(`Reference not found for ${svc.name}: ${refPath}`);
-      continue;
-    }
+    const specBase = path.basename(svc.spec, path.extname(svc.spec));
+    const refPath = path.join(argv.refdir, `${specBase}.postman_collection.json`);
+    if (!fs.existsSync(refPath)) { console.error(`Missing ref: ${refPath}`); continue; }
     const ref = readJSON(refPath);
 
-    // find subtree in working where to apply changes
-    const targetParent = ensureFolder(working, asArray(svc.workingFolder || []));
+    const targetRoot = ensureFolder(working, asArray(svc.workingFolder || []));
+    const seen = new Set();
 
-    // iterate ref requests
-    const seenKeys = new Set();
+    // add/update
     walkItems(ref, (rit, rtrail) => {
       const k = reqKey(rit);
       if (!k.trim()) return;
-      seenKeys.add(k);
+      seen.add(k);
       const existing = workMap.get(k);
       if (existing) {
         updateStructural(existing, rit);
         updated++;
       } else {
-        // add new request under an equivalent folder path if possible
-        const parent = ensureFolder(targetParent, rtrail);
+        const parent = ensureFolder(targetRoot, rtrail);
         const clone = deepClone(rit);
-        // tag new if requested
         if (cfg.options.tagNew) {
           clone.protocolProfileBehavior = clone.protocolProfileBehavior || {};
           clone.protocolProfileBehavior['x-status'] = cfg.options.tagNew;
         }
         parent.item = parent.item || [];
         parent.item.push(clone);
-        // update workMap so later steps see it
         workMap.set(k, clone);
         added++;
       }
     });
 
-    // retire requests that are in working but not in ref
+    // retire
     if (cfg.options.retireMode !== 'skip') {
-      const retiredFolder = ensureFolder(targetParent, ['_retired']);
-      // collect candidates only under this service subtree
-      function retireWalk(node) {
-        for (const it of asArray(node.item)) {
+      const retiredFolder = ensureFolder(targetRoot, ['_retired']);
+      function sweep(node) {
+        node.item = asArray(node.item).reduce((acc, it) => {
           if (it.item) {
-            if (it.name !== '_retired') retireWalk(it);
+            if (it.name !== '_retired') sweep(it);
+            acc.push(it);
           } else {
             const k = reqKey(it);
-            if (k && !seenKeys.has(k)) {
-              // move or delete
+            if (k && !seen.has(k)) {
               if (cfg.options.retireMode === 'delete') {
-                // remove by marking and filtering later
-                it.__DELETE_ME__ = true;
+                retired++;
               } else {
-                // move to _retired if not already there
                 if (node !== retiredFolder) {
                   retiredFolder.item = retiredFolder.item || [];
                   retiredFolder.item.push(it);
-                  it.__MOVED__ = true;
                 }
+                retired++;
               }
-              retired++;
+            } else {
+              acc.push(it);
             }
           }
-        }
-        // filter deletes
-        node.item = asArray(node.item).filter(x => !x.__DELETE_ME__);
+          return acc;
+        }, []);
       }
-      retireWalk(targetParent);
+      sweep(targetRoot);
     }
   }
 
