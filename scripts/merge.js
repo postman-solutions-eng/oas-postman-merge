@@ -4,10 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-const yargs = require('yargs/yargs');
-const { hideBin } = require('yargs/helpers');
+const yargs = require('yargs');
+// const { hideBin } = require('yargs/helpers');
 
-const argv = yargs(hideBin(process.argv))
+const argv = yargs(process.argv.slice(2))
   .option('config',  { type: 'string', demandOption: true })
   .option('working', { type: 'string', demandOption: true })
   .option('refdir',  { type: 'string', demandOption: true })
@@ -20,7 +20,7 @@ const deepClone = (o) => JSON.parse(JSON.stringify(o || null));
 const asArray = (x) => Array.isArray(x) ? x : (x == null ? [] : [x]);
 
 function readJSON(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-function writeJSON(p, j) { fs.writeFileSync(p, JSON.stringify(j, null, 2)); }
+function writeJSON(p, j) { fs.writeFileSync(p, JSON.stringify(j, null, 4)); }
 
 function loadConfig(p) {
   const txt = fs.readFileSync(p, 'utf8');

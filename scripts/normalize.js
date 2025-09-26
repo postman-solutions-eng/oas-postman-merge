@@ -74,5 +74,5 @@ if (!file) {
 }
 const coll = JSON.parse(fs.readFileSync(file, 'utf8'));
 normalizeAny(coll, '');
-fs.writeFileSync(file, JSON.stringify(coll, null, 2));
+fs.writeFileSync(file, JSON.stringify(coll, null, 4));
 console.log(`Normalized ${file}`);

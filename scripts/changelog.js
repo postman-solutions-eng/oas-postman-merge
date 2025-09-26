@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 const fs = require('fs');
-const yargs = require('yargs/yargs');
-const { hideBin } = require('yargs/helpers');
+const yargs = require('yargs');
 
-const argv = yargs(hideBin(process.argv))
+const argv = yargs(process.argv.slice(2))
   .option('before', { type: 'string', demandOption: true })
   .option('after',  { type: 'string', demandOption: true })
   .option('out',    { type: 'string', demandOption: true })
