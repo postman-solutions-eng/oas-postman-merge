@@ -1,183 +1,308 @@
 {
-    "auth": {
-        "apikey": [
-            {
-                "key": "key",
-                "value": "X-API-Key"
-            },
-            {
-                "key": "value",
-                "value": "{{apiKey}}"
-            }
-        ],
-        "type": "apikey"
-    },
-    "event": [],
-    "info": {
-        "name": "Demo API",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-    },
-    "item": [
+  "auth": {
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}"
+      }
+    ],
+    "type": "apikey"
+  },
+  "event": [],
+  "info": {
+    "name": "Demo API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "description": "",
+      "item": [
         {
-            "description": "",
-            "item": [
+          "description": "",
+          "item": [
+            {
+              "description": "",
+              "item": [
                 {
-                    "description": "",
-                    "item": [
+                  "description": "[Docs] https://developer.tableau.com/rest-api/reference/custom-views\nNotes: pagination defaults, includeSubsites caveat.\n---\nReturns a list of custom views (from spec).",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "// DON'T TOUCH — preserved by merge",
+                          "pm.test('status 200', () => pm.response.code === 200);"
+                        ]
+                      }
+                    }
+                  ],
+                  "name": "list Custom Views",
+                  "request": {
+                    "method": "GET",
+                    "url": {
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "sites",
+                        ":siteId",
+                        "custom-views"
+                      ],
+                      "query": [
                         {
-                            "description": "",
-                            "item": [
-                                {
-                                    "description": "[Docs] https://developer.tableau.com/rest-api/reference/custom-views\nNotes: pagination defaults, includeSubsites caveat.\n---\nReturns a list of custom views (from spec).",
-                                    "event": [
-                                        {
-                                            "listen": "test",
-                                            "script": {
-                                                "exec": [
-                                                    "// DON'T TOUCH — preserved by merge",
-                                                    "pm.test('status 200', () => pm.response.code === 200);"
-                                                ]
-                                            }
-                                        }
-                                    ],
-                                    "name": "list Custom Views",
-                                    "request": {
-                                        "description": {},
-                                        "method": "GET",
-                                        "url": {
-                                            "host": [
-                                                "{{baseUrl}}"
-                                            ],
-                                            "path": [
-                                                "sites",
-                                                ":siteId",
-                                                "custom-views"
-                                            ],
-                                            "query": [
-                                                {
-                                                    "disabled": false,
-                                                    "key": "pageSize",
-                                                    "value": "100"
-                                                }
-                                            ],
-                                            "variable": [
-                                                {
-                                                    "description": "(Required) ",
-                                                    "disabled": false,
-                                                    "key": "siteId",
-                                                    "type": "any",
-                                                    "value": "<string>"
-                                                }
-                                            ]
-                                        }
-                                    },
-                                    "response": [
-                                        {
-                                            "_postman_previewlanguage": "text",
-                                            "code": 200,
-                                            "cookie": [],
-                                            "header": [],
-                                            "name": "ok",
-                                            "originalRequest": {
-                                                "body": {},
-                                                "method": "GET",
-                                                "url": {
-                                                    "host": [
-                                                        "{{baseUrl}}"
-                                                    ],
-                                                    "path": [
-                                                        "sites",
-                                                        ":siteId",
-                                                        "custom-views"
-                                                    ],
-                                                    "query": [
-                                                        {
-                                                            "disabled": false,
-                                                            "key": "pageSize",
-                                                            "value": "100"
-                                                        }
-                                                    ],
-                                                    "variable": []
-                                                }
-                                            },
-                                            "status": "OK"
-                                        }
-                                    ]
-                                }
-                            ],
-                            "name": "custom-views"
+                          "disabled": false,
+                          "key": "includeSubsites",
+                          "value": "<boolean>"
                         },
                         {
-                            "description": "",
-                            "item": [
-                                {
-                                    "event": [],
-                                    "name": "delete Legacy Token",
-                                    "request": {
-                                        "description": {},
-                                        "method": "DELETE",
-                                        "url": {
-                                            "host": [
-                                                "{{baseUrl}}"
-                                            ],
-                                            "path": [
-                                                "sites",
-                                                ":siteId",
-                                                "legacyTokens"
-                                            ],
-                                            "query": [],
-                                            "variable": [
-                                                {
-                                                    "description": "(Required) ",
-                                                    "disabled": false,
-                                                    "key": "siteId",
-                                                    "type": "any",
-                                                    "value": "<string>"
-                                                }
-                                            ]
-                                        }
-                                    },
-                                    "response": [
-                                        {
-                                            "_postman_previewlanguage": "text",
-                                            "code": 204,
-                                            "cookie": [],
-                                            "header": [],
-                                            "name": "deleted",
-                                            "originalRequest": {
-                                                "body": {},
-                                                "method": "DELETE",
-                                                "url": {
-                                                    "host": [
-                                                        "{{baseUrl}}"
-                                                    ],
-                                                    "path": [
-                                                        "sites",
-                                                        ":siteId",
-                                                        "legacyTokens"
-                                                    ],
-                                                    "query": [],
-                                                    "variable": []
-                                                }
-                                            },
-                                            "status": "No Content"
-                                        }
-                                    ]
-                                }
-                            ],
-                            "name": "legacyTokens"
+                          "disabled": false,
+                          "key": "pageSize",
+                          "value": "100"
                         }
-                    ],
-                    "name": "{siteId}"
+                      ],
+                      "variable": [
+                        {
+                          "description": "(Required) ",
+                          "disabled": false,
+                          "key": "siteId",
+                          "type": "any",
+                          "value": "<string>"
+                        }
+                      ]
+                    }
+                  },
+                  "response": [
+                    {
+                      "_postman_previewlanguage": "text",
+                      "code": 200,
+                      "cookie": [],
+                      "header": [],
+                      "name": "ok",
+                      "originalRequest": {
+                        "body": {},
+                        "method": "GET",
+                        "url": {
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "sites",
+                            ":siteId",
+                            "custom-views"
+                          ],
+                          "query": [
+                            {
+                              "disabled": false,
+                              "key": "pageSize",
+                              "value": "100"
+                            }
+                          ],
+                          "variable": []
+                        }
+                      },
+                      "status": "OK"
+                    }
+                  ]
                 }
-            ],
-            "name": "sites"
+              ],
+              "name": "custom-views"
+            },
+            {
+              "description": "",
+              "item": [],
+              "name": "legacyTokens"
+            }
+          ],
+          "name": "{siteId}"
         }
-    ],
-    "variable": [
+      ],
+      "name": "sites"
+    },
+    {
+      "item": [
         {
-            "key": "baseUrl",
-            "value": "https://api.example.com"
+          "event": [],
+          "name": "share Custom View",
+          "protocolProfileBehavior": {
+            "x-status": "status:new"
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
+            },
+            "description": {},
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                ":siteId",
+                "custom-views",
+                ":customViewId",
+                "share"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "description": "(Required) ",
+                  "disabled": false,
+                  "key": "siteId",
+                  "type": "any",
+                  "value": "<string>"
+                },
+                {
+                  "description": "(Required) ",
+                  "disabled": false,
+                  "key": "customViewId",
+                  "type": "any",
+                  "value": "<string>"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "text",
+              "body": "",
+              "code": 204,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "text/plain"
+                }
+              ],
+              "name": "shared",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
+                },
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sites",
+                    ":siteId",
+                    "custom-views",
+                    ":customViewId",
+                    "share"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "siteId",
+                      "type": "any",
+                      "value": "<string>"
+                    },
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "customViewId",
+                      "type": "any",
+                      "value": "<string>"
+                    }
+                  ]
+                }
+              },
+              "status": "No Content"
+            }
+          ]
         }
-    ]
+      ],
+      "name": "sites/{site Id}/custom-views"
+    },
+    {
+      "item": [
+        {
+          "event": [],
+          "name": "delete Legacy Token",
+          "request": {
+            "description": {},
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                ":siteId",
+                "legacyTokens"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "description": "(Required) ",
+                  "disabled": false,
+                  "key": "siteId",
+                  "type": "any",
+                  "value": "<string>"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "text",
+              "code": 204,
+              "cookie": [],
+              "header": [],
+              "name": "deleted",
+              "originalRequest": {
+                "body": {},
+                "method": "DELETE",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sites",
+                    ":siteId",
+                    "legacyTokens"
+                  ],
+                  "query": [],
+                  "variable": []
+                }
+              },
+              "status": "No Content"
+            }
+          ]
+        }
+      ],
+      "name": "_retired"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.example.com"
+    }
+  ]
 }
