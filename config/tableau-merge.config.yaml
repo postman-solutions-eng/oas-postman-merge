@@ -1,0 +1,12 @@
+# Tableau API merge configuration
+services:
+  - name: "Tableau Sites API"
+    spec: "openapi/tableau-sites-v2.yaml"
+    workingFolder: ["Tableau REST API", "Sites"]  # Navigate to Sites section
+options:
+  preferOperationId: true
+  keepWorkingItemName: true
+  descriptionDelimiter: "\n---\n"
+  tagNew: "status:new"
+  retireMode: "move"
+  order: "keep"

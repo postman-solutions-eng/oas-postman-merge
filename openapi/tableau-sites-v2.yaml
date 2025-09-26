@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: Tableau Sites API
+  version: 2.0.0  # Version bump
+  description: Tableau REST API for managing sites - Enhanced with new features
+servers:
+  - url: https://server/api/3.11
+    description: Tableau Server
+paths:
+  /sites:
+    post:
+      operationId: createSite
+      summary: Create Site
+      description: Creates a new site with enhanced configuration options
+      parameters:
+        - in: header
+          name: X-Tableau-Auth
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    contentUrl:
+                      type: string
+                    adminMode:
+                      type: string
+                    storageQuota:  # NEW FIELD
+                      type: integer
+                      description: Storage limit in MB
+      responses:
+        '201':
+          description: Site created successfully
+    get:
+      operationId: querySites
+      summary: Query Sites
+      description: Returns a list of sites with filtering capabilities
+      parameters:
+        - in: header
+          name: X-Tableau-Auth
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: pageNumber
+          schema:
+            type: integer
+            default: 1
+        - in: query  # NEW PARAMETER
+          name: filter
+          schema:
+            type: string
+          description: Filter sites by name or status
+        - in: query  # NEW PARAMETER  
+          name: includeInactive
+          schema:
+            type: boolean
+            default: false
+          description: Include inactive sites in results
+      responses:
+        '200':
+          description: List of sites with enhanced metadata
+  /sites/{siteId}:
+    delete:
+      operationId: deleteSite
+      summary: Delete Site by ID
+      description: Deletes a site by ID with cascade options
+      parameters:
+        - in: header
+          name: X-Tableau-Auth
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: siteId
+          required: true
+          schema:
+            type: string
+        - in: query  # NEW PARAMETER
+          name: cascade
+          schema:
+            type: boolean
+            default: false
+          description: Delete associated workbooks and data sources
+      responses:
+        '204':
+          description: Site deleted successfully
+    put:
+      operationId: updateSite
+      summary: Update Site
+      description: Updates site information with validation
+      parameters:
+        - in: header
+          name: X-Tableau-Auth
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: siteId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    contentUrl:
+                      type: string
+                    storageQuota:  # NEW FIELD
+                      type: integer
+      responses:
+        '200':
+          description: Site updated successfully
+  /sites/{siteId}/settings:  # NEW ENDPOINT
+    get:
+      operationId: getSiteSettings
+      summary: Get Site Settings
+      description: Retrieve configuration settings for a site
+      parameters:
+        - in: header
+          name: X-Tableau-Auth
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: siteId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Site settings retrieved successfully
+    put:
+      operationId: updateSiteSettings
+      summary: Update Site Settings
+      description: Update configuration settings for a site
+      parameters:
+        - in: header
+          name: X-Tableau-Auth
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: siteId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                settings:
+                  type: object
+                  properties:
+                    allowSubscriptions:
+                      type: boolean
+                    guestAccess:
+                      type: boolean
+      responses:
+        '200':
+          description: Site settings updated successfully
