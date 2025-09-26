@@ -12,45 +12,35 @@ function descToString(d) {
   return undefined;
 }
 
-function walk(node) {
-  if (!node) return;
+// Deep walk: for every object we see, if it has a "description" field, collapse it.
+// Also strip common noisy keys and sort stable arrays.
+function normalizeAny(node, parentKey = '') {
+  if (!node || typeof node !== 'object') return;
 
-  // Strip volatile IDs
-  delete node.id;
-  if (node.info) delete node.info._postman_id;
-
-  // Canonicalize description on any node → string or removed
-  const nd = descToString(node.description);
-  if (nd !== undefined) {
-    if (nd.length) node.description = nd;
-    else delete node.description;
+  // Collapse any .description we encounter (works for info, request, responses, params, etc.)
+  if ('description' in node) {
+    const s = descToString(node.description);
+    if (s !== undefined) {
+      if (s.length) node.description = s;
+      else delete node.description;
+    }
   }
 
+  // Strip volatile IDs on known shapes
+  if ('id' in node && (parentKey === 'item' || parentKey === 'response' || parentKey === 'event')) {
+    delete node.id;
+  }
+  if (node.info && node.info._postman_id) delete node.info._postman_id;
+
+  // Request-specific cleanup
   if (node.request) {
     const r = node.request;
-
-    // Drop non-standard request.name (causes churn)
     if (r.name) delete r.name;
-
-    // Canonicalize request.description
-    const rd = descToString(r.description);
-    if (rd !== undefined) {
-      if (rd.length) r.description = rd;
-      else delete r.description;
-    }
-
-    // Sort headers & query params for stability
-    if (Array.isArray(r.header))
-      r.header.sort((a,b)=>String(a.key||'').localeCompare(String(b.key||'')));
-
+    if (Array.isArray(r.header)) r.header.sort((a,b)=>String(a.key||'').localeCompare(String(b.key||'')));
     if (r.url && typeof r.url === 'object' && Array.isArray(r.url.query))
       r.url.query.sort((a,b)=>String(a.key||'').localeCompare(String(b.key||'')));
-
-    // Remove null/empty noise
     if (r.auth === null) delete r.auth;
     if (r.body && Object.keys(r.body).length === 0) delete r.body;
-
-    // Prefer host/path representation; drop raw if redundant
     if (r.url && typeof r.url === 'object' && 'raw' in r.url &&
         (Array.isArray(r.url.path) || Array.isArray(r.url.host))) {
       delete r.url.raw;
@@ -67,9 +57,14 @@ function walk(node) {
     else delete node.protocolProfileBehavior;
   }
 
-  // Recurse
-  if (Array.isArray(node.item)) node.item.forEach(walk);
-  if (Array.isArray(node.response)) node.response.forEach(r => { delete r.id; });
+  // Recurse into arrays/objects
+  if (Array.isArray(node)) {
+    node.forEach((v) => normalizeAny(v, parentKey));
+  } else {
+    for (const [k, v] of Object.entries(node)) {
+      if (v && typeof v === 'object') normalizeAny(v, k);
+    }
+  }
 }
 
 const file = process.argv[2];
@@ -78,6 +73,6 @@ if (!file) {
   process.exit(1);
 }
 const coll = JSON.parse(fs.readFileSync(file, 'utf8'));
-walk(coll);
+normalizeAny(coll, '');
 fs.writeFileSync(file, JSON.stringify(coll, null, 2));
 console.log(`Normalized ${file}`);

@@ -50,8 +50,7 @@ jobs:
             --refdir ref \
             --out collections/working.merged.json
 
-      # IMPORTANT: changelog compares BEFORE (current working.json) vs AFTER (merged.merged.json)
-      # Run it BEFORE we copy/normalize so it sees the real change.
+      # Generate changelog BEFORE copy/normalize so it reflects real adds/retires.
       - name: Generate changelog (pre-normalize)
         run: |
           node scripts/changelog.js \
