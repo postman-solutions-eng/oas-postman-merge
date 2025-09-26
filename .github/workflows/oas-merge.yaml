@@ -53,7 +53,7 @@ jobs:
       # Generate changelog BEFORE copy/normalize so it reflects real adds/retires.
       - name: Generate changelog (pre-normalize)
         run: |
-          node scripts/changelog.js \
+          node scripts/enhanced-changelog.js \
             --before collections/working.json \
             --after  collections/working.merged.json \
             --out CHANGELOG.md
