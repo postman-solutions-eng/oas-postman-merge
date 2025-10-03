@@ -1,46 +1,259 @@
 {
-    "auth": {
-        "apikey": [
-            {
-                "key": "key",
-                "value": "X-API-Key"
-            },
-            {
-                "key": "value", 
-                "value": "{{demoApiKey}}"
-            }
-        ],
-        "type": "apikey"
-    },
-    "info": {
-        "name": "Demo API",
-        "description": "🎬 Video Demo Collection\n\nThis collection shows automated OpenAPI-to-Postman merging with curation preservation.\n\n---\n\nGenerated content will appear here after merge.",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-    },
-    "event": [
-        {
-            "listen": "test",
-            "script": {
-                "exec": [
-                    "// 🛡️ CURATED: Collection-level test (preserved)",
-                    "pm.test('Demo: API responded', () => {",
-                    "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
-                    "});"
-                ]
-            }
-        }
+  "auth": {
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key"
+      },
+      {
+        "key": "value",
+        "value": "{{demoApiKey}}"
+      }
     ],
-    "item": [],
-    "variable": [
+    "type": "apikey"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// 🛡️ CURATED: Collection-level test (preserved)",
+          "pm.test('Demo: API responded', () => {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "info": {
+    "description": "🎬 Video Demo Collection\n\nThis collection shows automated OpenAPI-to-Postman merging with curation preservation.\n\n---\n\nGenerated content will appear here after merge.",
+    "name": "Demo API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "item": [
         {
-            "key": "baseUrl",
-            "value": "https://api.example.com",
-            "description": "🎬 Demo environment"
+          "event": [],
+          "name": "list Custom Views",
+          "protocolProfileBehavior": {
+            "x-status": "status:new"
+          },
+          "request": {
+            "description": {},
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                ":siteId",
+                "custom-views"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "key": "includeSubsites",
+                  "value": "<boolean>"
+                },
+                {
+                  "disabled": false,
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ],
+              "variable": [
+                {
+                  "description": "(Required) ",
+                  "disabled": false,
+                  "key": "siteId",
+                  "type": "any",
+                  "value": "<string>"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "text",
+              "body": "",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "text/plain"
+                }
+              ],
+              "name": "ok",
+              "originalRequest": {
+                "body": {},
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sites",
+                    ":siteId",
+                    "custom-views"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageSize",
+                      "value": "100"
+                    },
+                    {
+                      "key": "includeSubsites",
+                      "value": "<boolean>"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "siteId",
+                      "type": "any",
+                      "value": "<string>"
+                    }
+                  ]
+                }
+              },
+              "status": "OK"
+            }
+          ]
         },
         {
-            "key": "demoApiKey", 
-            "value": "{{$randomApiKey}}",
-            "description": "🔑 Demo API key (curated)"
+          "event": [],
+          "name": "share Custom View",
+          "protocolProfileBehavior": {
+            "x-status": "status:new"
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
+            },
+            "description": {},
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                ":siteId",
+                "custom-views",
+                ":customViewId",
+                "share"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "description": "(Required) ",
+                  "disabled": false,
+                  "key": "siteId",
+                  "type": "any",
+                  "value": "<string>"
+                },
+                {
+                  "description": "(Required) ",
+                  "disabled": false,
+                  "key": "customViewId",
+                  "type": "any",
+                  "value": "<string>"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "text",
+              "body": "",
+              "code": 204,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "text/plain"
+                }
+              ],
+              "name": "shared",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
+                },
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sites",
+                    ":siteId",
+                    "custom-views",
+                    ":customViewId",
+                    "share"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "siteId",
+                      "type": "any",
+                      "value": "<string>"
+                    },
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "customViewId",
+                      "type": "any",
+                      "value": "<string>"
+                    }
+                  ]
+                }
+              },
+              "status": "No Content"
+            }
+          ]
         }
-    ]
+      ],
+      "name": "sites/{site Id}/custom-views"
+    },
+    {
+      "item": [],
+      "name": "_retired"
+    }
+  ],
+  "variable": [
+    {
+      "description": "🎬 Demo environment",
+      "key": "baseUrl",
+      "value": "https://api.example.com"
+    },
+    {
+      "description": "🔑 Demo API key (curated)",
+      "key": "demoApiKey",
+      "value": "{{$randomApiKey}}"
+    }
+  ]
 }
