@@ -1,511 +1,268 @@
 {
-  "auth": {
-    "apikey": [
-      {
-        "key": "key",
-        "type": "string",
-        "value": "X-API-Key"
-      },
-      {
-        "key": "value",
-        "type": "string",
-        "value": "{{demoApiKey}}"
-      }
-    ],
-    "type": "apikey"
-  },
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "exec": [
-          "// 🛡️ CURATED: Enterprise logging & monitoring",
-          "console.log('🚀 Demo API Request:', {",
-          "    timestamp: new Date().toISOString(),",
-          "    endpoint: pm.request.url.toString(),",
-          "    method: pm.request.method",
-          "});"
-        ],
-        "type": "text/javascript"
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "exec": [
-          "// 🛡️ CURATED: Production monitoring suite",
-          "pm.test('⚡ Response time < 2s', () => {",
-          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
-          "});",
-          "",
-          "pm.test('🔒 Security headers present', () => {",
-          "    pm.expect(pm.response.headers.has('Content-Type')).to.be.true;",
-          "});",
-          "",
-          "// 📊 Custom metrics tracking",
-          "if (pm.response.code === 200) {",
-          "    pm.collectionVariables.set('successCount', ",
-          "        (pm.collectionVariables.get('successCount') || 0) + 1);",
-          "}"
-        ],
-        "type": "text/javascript"
-      }
-    }
-  ],
-  "info": {
-    "_exporter_id": "30401009",
-    "description": "🎯 **Production-Ready Demo Collection**\n\nThis collection showcases:\n- Enterprise authentication\n- Comprehensive test coverage\n- Production monitoring\n- Team documentation\n\n---\n\nAuto-generated content will appear below after OpenAPI sync.",
-    "name": "Demo API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "item": [
-    {
-      "auth": {
-        "bearer": [
-          {
-            "key": "token",
-            "type": "string",
-            "value": "{{enterpriseToken}}"
-          }
-        ],
-        "type": "bearer"
-      },
-      "description": "**Enterprise Sites API**\n\nHandles multi-tenant site operations with enterprise-grade:\n- Authentication & authorization\n- Rate limiting & monitoring\n- Audit logging\n\n---\n\nGenerated endpoints from OpenAPI spec appear below.",
-      "item": [
-        {
-          "item": [
-            {
-              "description": "**Custom View Management**\n\nEnterprise features:\n- Advanced filtering & pagination\n- Bulk operations\n- Access control integration\n\n---\n\nAuto-generated from OpenAPI specification.",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "// 🛡️ CURATED: Custom views validation",
-                      "pm.test('📊 Custom views response format', () => {",
-                      "    if (pm.response.code === 200) {",
-                      "        const response = pm.response.json();",
-                      "        pm.expect(response).to.have.property('customViews');",
-                      "    }",
-                      "});"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "item": [
-                {
-                  "event": [],
-                  "name": "list Custom Views",
-                  "protocolProfileBehavior": {
-                    "x-status": "status:new"
-                  },
-                  "request": {
-                    "description": {},
-                    "method": "GET",
-                    "url": {
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "sites",
-                        ":siteId",
-                        "custom-views"
-                      ],
-                      "query": [
-                        {
-                          "disabled": false,
-                          "key": "includeSubsites",
-                          "value": "<boolean>"
-                        },
-                        {
-                          "disabled": false,
-                          "key": "pageSize",
-                          "value": "100"
-                        }
-                      ],
-                      "variable": [
-                        {
-                          "description": "(Required) ",
-                          "disabled": false,
-                          "key": "siteId",
-                          "type": "any",
-                          "value": "<string>"
-                        }
-                      ]
-                    }
-                  },
-                  "response": [
-                    {
-                      "_postman_previewlanguage": "text",
-                      "code": 200,
-                      "cookie": [],
-                      "header": [],
-                      "name": "ok",
-                      "originalRequest": {
-                        "body": {},
-                        "method": "GET",
-                        "url": {
-                          "host": [
-                            "{{baseUrl}}"
-                          ],
-                          "path": [
-                            "sites",
-                            ":siteId",
-                            "custom-views"
-                          ],
-                          "query": [
-                            {
-                              "disabled": false,
-                              "key": "pageSize",
-                              "value": "100"
-                            },
-                            {
-                              "disabled": false,
-                              "key": "includeSubsites",
-                              "value": "<boolean>"
-                            }
-                          ],
-                          "variable": []
-                        }
-                      },
-                      "status": "OK"
-                    }
-                  ]
-                },
-                {
-                  "item": [
-                    {
-                      "item": [
-                        {
-                          "event": [],
-                          "name": "share Custom View",
-                          "protocolProfileBehavior": {
-                            "x-status": "status:new"
-                          },
-                          "request": {
-                            "body": {
-                              "mode": "raw",
-                              "options": {
-                                "raw": {
-                                  "headerFamily": "json",
-                                  "language": "json"
-                                }
-                              },
-                              "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
-                            },
-                            "description": {},
-                            "header": [
-                              {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                              }
-                            ],
-                            "method": "POST",
-                            "url": {
-                              "host": [
-                                "{{baseUrl}}"
-                              ],
-                              "path": [
-                                "sites",
-                                ":siteId",
-                                "custom-views",
-                                ":customViewId",
-                                "share"
-                              ],
-                              "query": [],
-                              "variable": [
-                                {
-                                  "description": "(Required) ",
-                                  "disabled": false,
-                                  "key": "siteId",
-                                  "type": "any",
-                                  "value": "<string>"
-                                },
-                                {
-                                  "description": "(Required) ",
-                                  "disabled": false,
-                                  "key": "customViewId",
-                                  "type": "any",
-                                  "value": "<string>"
-                                }
-                              ]
-                            }
-                          },
-                          "response": [
-                            {
-                              "_postman_previewlanguage": "text",
-                              "code": 204,
-                              "cookie": [],
-                              "header": [],
-                              "name": "shared",
-                              "originalRequest": {
-                                "body": {
-                                  "mode": "raw",
-                                  "options": {
-                                    "raw": {
-                                      "headerFamily": "json",
-                                      "language": "json"
-                                    }
-                                  },
-                                  "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
-                                },
-                                "header": [
-                                  {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                  }
-                                ],
-                                "method": "POST",
-                                "url": {
-                                  "host": [
-                                    "{{baseUrl}}"
-                                  ],
-                                  "path": [
-                                    "sites",
-                                    ":siteId",
-                                    "custom-views",
-                                    ":customViewId",
-                                    "share"
-                                  ],
-                                  "query": [],
-                                  "variable": []
-                                }
-                              },
-                              "status": "No Content"
-                            }
-                          ]
-                        }
-                      ],
-                      "name": "share"
-                    }
-                  ],
-                  "name": "{customViewId}"
-                }
-              ],
-              "name": "custom-views"
-            },
-            {
-              "description": "**Security Management**\n\n⚠️ **Legacy token cleanup operations**\n- Scheduled for deprecation Q2 2024\n- Migration guide: https://docs.company.com/auth\n- Contact: security-team@company.com\n\n---\n\nGenerated from OpenAPI specification.",
-              "item": [],
-              "name": "legacyTokens"
-            }
-          ],
-          "name": "{siteId}"
-        }
-      ],
-      "name": "sites"
-    },
-    {
-      "item": [
-        {
-          "description": "**Production Endpoint**\n\nRetrieve paginated custom views with enterprise filtering.\n\n🔧 **Team Notes:**\n- Default pageSize optimized for performance\n- includeSubsites parameter coming in v2\n- Rate limited: 100 req/min\n\n---\n\nGenerated from OpenAPI: GET /sites/{siteId}/custom-views",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "// 🛡️ CURATED: Production validation",
-                  "pm.test('✅ Success response', () => {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
-                  "});",
-                  "",
-                  "pm.test('🔍 Pagination headers', () => {",
-                  "    if (pm.response.code === 200) {",
-                  "        pm.expect(pm.response.headers.has('X-Total-Count')).to.be.true;",
-                  "    }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "name": "list Custom Views",
-          "request": {
-            "header": [
-              {
-                "key": "Accept",
-                "type": "text",
-                "value": "application/json"
-              },
-              {
-                "description": "🛡️ CURATED: Production API version",
-                "key": "X-Demo-Version",
-                "type": "text",
-                "value": "2024-production"
-              }
-            ],
-            "method": "GET",
-            "url": {
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "sites",
-                ":siteId",
-                "custom-views"
-              ],
-              "query": [
-                {
-                  "key": "pageSize",
-                  "value": "100"
-                }
-              ],
-              "variable": [
-                {
-                  "key": "siteId",
-                  "value": "string"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "_postman_previewlanguage": "text",
-              "body": "",
-              "code": 200,
-              "cookie": [],
-              "header": [],
-              "name": "ok",
-              "originalRequest": {
-                "header": [],
-                "method": "GET",
-                "url": {
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sites",
-                    ":siteId",
-                    "custom-views"
-                  ],
-                  "query": [
-                    {
-                      "key": "pageSize",
-                      "value": "100"
-                    }
-                  ],
-                  "raw": "{{baseUrl}}/sites/:siteId/custom-views?pageSize=100",
-                  "variable": [
-                    {
-                      "key": "siteId"
-                    }
-                  ]
-                }
-              },
-              "status": "OK"
-            }
-          ]
-        },
-        {
-          "description": "**Security Operation**\n\n⚠️ **PRODUCTION USE ONLY**\n- Requires security team approval\n- Audit logged automatically\n- Irreversible operation\n\n---\n\nGenerated from OpenAPI: DELETE /sites/{siteId}/legacyTokens",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "// 🛡️ CURATED: Security audit logging",
-                  "const auditLog = {",
-                  "    action: 'DELETE_LEGACY_TOKEN',",
-                  "    user: pm.collectionVariables.get('currentUser') || 'demo-user',",
-                  "    siteId: pm.variables.get('siteId'),",
-                  "    timestamp: new Date().toISOString()",
-                  "};",
-                  "console.log('🔒 Security Audit:', auditLog);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "name": "delete Legacy Token",
-          "request": {
-            "header": [
-              {
-                "description": "🛡️ CURATED: Security audit header",
-                "key": "X-Audit-User",
-                "type": "text",
-                "value": "{{currentUser}}"
-              }
-            ],
-            "method": "DELETE",
-            "url": {
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "sites",
-                ":siteId",
-                "legacyTokens"
-              ],
-              "variable": [
-                {
-                  "key": "siteId",
-                  "value": "string"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "_postman_previewlanguage": "text",
-              "body": "",
-              "code": 204,
-              "cookie": [],
-              "header": [],
-              "name": "deleted",
-              "originalRequest": {
-                "header": [],
-                "method": "DELETE",
-                "url": {
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sites",
-                    ":siteId",
-                    "legacyTokens"
-                  ],
-                  "raw": "{{baseUrl}}/sites/:siteId/legacyTokens",
-                  "variable": [
-                    {
-                      "key": "siteId"
-                    }
-                  ]
-                }
-              },
-              "status": "No Content"
-            }
-          ]
-        }
-      ],
-      "name": "_retired"
-    }
-  ],
-  "variable": [
-    {
-      "description": "🌐 Production API endpoint",
-      "key": "baseUrl",
-      "value": "https://api.example.com"
-    },
-    {
-      "description": "🔑 CURATED: Demo API key with rotation",
-      "key": "demoApiKey",
-      "value": "demo_{{$randomApiKey}}"
-    },
-    {
-      "description": "🏢 CURATED: Enterprise bearer token",
-      "key": "enterpriseToken",
-      "value": "{{$randomJWT}}"
-    },
-    {
-      "description": "👤 CURATED: Current user for audit logs",
-      "key": "currentUser",
-      "value": "demo-engineer@company.com"
-    },
-    {
-      "description": "📊 CURATED: Success metrics counter",
-      "key": "successCount",
-      "value": "0"
-    }
-  ]
+	"info": {
+		"_postman_id": "93ebd67f-4642-44a7-bf61-e9db4c14b3f9",
+		"name": "Demo API",
+		"description": "This is our enterprise API collection, carefully curated by the team.\n\nInternal Docs: [https://internal.company.com/api-docs](https://internal.company.com/api-docs)\nTeam Notes: Ensure all requests use the correct environment variables.\n---\nGenerated from OpenAPI spec.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30401009"
+	},
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "key",
+				"value": "X-API-Key"
+			},
+			{
+				"key": "value",
+				"value": "{{demoApiKey}}"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Enterprise logging and monitoring setup",
+					"console.log('Pre-request script running for: ' + pm.request.name);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Production monitoring and metrics tracking",
+					"pm.test('Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(200);",
+					"});",
+					"pm.environment.set('successCount', (pm.environment.get('successCount') || 0) + 1);"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "sites",
+			"description": "This folder contains all site management endpoints.\n\nTeam Lead: @john.doe\n---",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{bearerToken}}"
+					}
+				]
+			},
+			"item": [
+				{
+					"name": "{siteId}",
+					"item": [
+					{
+						"name": "custom-views",
+						"description": "Endpoints for managing custom views within a site.\n\nValidation: Ensure views are correctly filtered by user permissions.\n---",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"// Custom view validation script",
+										"pm.test('Custom views response is valid', () => {",
+										"  const jsonData = pm.response.json();",
+										"  pm.expect(jsonData.views).to.be.an('array');",
+										"});"
+									]
+								}
+							}
+						],
+						"item": [
+							{
+								"name": "list Custom Views",
+								"description": "Retrieves a list of custom views for a given site.\n\nInternal Note: This endpoint is heavily used by the reporting dashboard.\n---",
+								"request": {
+									"method": "GET",
+									"header": [
+										{
+											"key": "X-Demo-Version",
+											"value": "1.2.3"
+										},
+										{
+											"key": "Accept",
+											"value": "application/json"
+										}
+									],
+										"url": {
+											"raw": "{{baseUrl}}/sites/:siteId/custom-views?pageSize=100",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"sites",
+												":siteId",
+												"custom-views"
+											],
+											"query": [
+												{
+													"key": "pageSize",
+													"value": "100"
+												}
+											],
+											"variable": [
+												{
+													"key": "siteId",
+													"value": "string"
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "ok",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sites/:siteId/custom-views?pageSize=100",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sites",
+														":siteId",
+														"custom-views"
+													],
+													"query": [
+														{
+															"key": "pageSize",
+															"value": "100"
+														}
+													],
+													"variable": [
+														{
+															"key": "siteId"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "text",
+											"header": [],
+											"cookie": [],
+											"body": ""
+										}
+									]
+								}
+							]
+						},
+					{
+						"name": "legacyTokens",
+						"description": "Endpoints for managing legacy tokens. **SECURITY WARNING**: These tokens are deprecated.\n\nAudit Policy: All deletions must be logged.\n---",
+						"item": [
+							{
+								"name": "delete Legacy Token",
+								"description": "Deletes a legacy token for a site.\n\nCritical: Requires elevated permissions.\n---",
+								"event": [
+									{
+										"listen": "prerequest",
+										"script": {
+											"type": "text/javascript",
+											"exec": [
+												"// Security audit logging for token deletion",
+												"console.log('Attempting to delete legacy token for site: ' + pm.variables.get('siteId'));"
+											]
+										}
+									}
+								],
+								"request": {
+									"method": "DELETE",
+									"header": [
+										{
+											"key": "X-Audit-User",
+											"value": "{{currentUser}}"
+										}
+									],
+										"url": {
+											"raw": "{{baseUrl}}/sites/:siteId/legacyTokens",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"sites",
+												":siteId",
+												"legacyTokens"
+											],
+											"variable": [
+												{
+													"key": "siteId",
+													"value": "string"
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "deleted",
+											"originalRequest": {
+												"method": "DELETE",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sites/:siteId/legacyTokens",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sites",
+														":siteId",
+														"legacyTokens"
+													],
+													"variable": [
+														{
+															"key": "siteId"
+														}
+													]
+												}
+											},
+											"status": "No Content",
+											"code": 204,
+											"_postman_previewlanguage": "text",
+											"header": [],
+											"cookie": [],
+											"body": ""
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://api.example.com"
+		},
+		{
+			"key": "demoApiKey",
+			"value": "your-demo-api-key"
+		},
+		{
+			"key": "bearerToken",
+			"value": "your-bearer-token"
+		},
+		{
+			"key": "currentUser",
+			"value": "demo-user"
+		},
+		{
+			"key": "successCount",
+			"value": "0"
+		}
+	]
 }
