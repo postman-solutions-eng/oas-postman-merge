@@ -1,13 +1,46 @@
 {
+    "auth": {
+        "apikey": [
+            {
+                "key": "key",
+                "value": "X-API-Key"
+            },
+            {
+                "key": "value", 
+                "value": "{{demoApiKey}}"
+            }
+        ],
+        "type": "apikey"
+    },
     "info": {
         "name": "Demo API",
+        "description": "🎬 Video Demo Collection\n\nThis collection shows automated OpenAPI-to-Postman merging with curation preservation.\n\n---\n\nGenerated content will appear here after merge.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
+    "event": [
+        {
+            "listen": "test",
+            "script": {
+                "exec": [
+                    "// 🛡️ CURATED: Collection-level test (preserved)",
+                    "pm.test('Demo: API responded', () => {",
+                    "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                    "});"
+                ]
+            }
+        }
+    ],
     "item": [],
     "variable": [
         {
             "key": "baseUrl",
-            "value": "https://api.example.com"
+            "value": "https://api.example.com",
+            "description": "🎬 Demo environment"
+        },
+        {
+            "key": "demoApiKey", 
+            "value": "{{$randomApiKey}}",
+            "description": "🔑 Demo API key (curated)"
         }
     ]
 }
