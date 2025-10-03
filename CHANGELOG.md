@@ -1,8 +1,15 @@
-## Collection Changes
+# Semantic Collection Changes
 
-### Added
-- POST {{baseUrl}}/sites/:siteId/custom-views/:customViewId/share — **share Custom View** (sites / {siteId} / custom-views / {customViewId} / share)
+## 🔄 API Evolution
+<!-- Structural endpoint changes -->
 
-### Retired (not deleted)
-- DELETE {{baseUrl}}/sites/:siteId/legacyTokens — **delete Legacy Token** (sites / {siteId} / legacyTokens)
+## ✅ Preserved Curated Content
+- **Test Scripts**: 5 → 5 (✅ Preserved)
+- **Auth Configs**: 2 → 4 (❌ Changed)
+- **Custom Headers**: 26 preserved
+- **Custom Descriptions**: 6 with delimiters preserved
 
+## 📊 Change Impact
+- **Semantic changes**: 4 meaningful API modifications
+- **Format changes**: Ignored (XML↔JSON, whitespace, etc.)
+- **Curation impact**: Zero (35 items protected)
