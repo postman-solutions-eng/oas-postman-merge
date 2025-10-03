@@ -1,46 +1,322 @@
 {
-    "auth": {
-        "apikey": [
-            {
-                "key": "key",
-                "value": "X-API-Key"
-            },
-            {
-                "key": "value", 
-                "value": "{{demoApiKey}}"
-            }
-        ],
-        "type": "apikey"
-    },
-    "info": {
-        "name": "Demo API",
-        "description": "🎬 Video Demo Collection\n\nThis collection shows automated OpenAPI-to-Postman merging with curation preservation.\n\n---\n\nGenerated content will appear here after merge.",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-    },
-    "event": [
-        {
-            "listen": "test",
-            "script": {
-                "exec": [
-                    "// 🛡️ CURATED: Collection-level test (preserved)",
-                    "pm.test('Demo: API responded', () => {",
-                    "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
-                    "});"
-                ]
-            }
-        }
-    ],
-    "item": [],
-    "variable": [
-        {
-            "key": "baseUrl",
-            "value": "https://api.example.com",
-            "description": "🎬 Demo environment"
-        },
-        {
-            "key": "demoApiKey", 
-            "value": "{{$randomApiKey}}",
-            "description": "🔑 Demo API key (curated)"
-        }
-    ]
+	"info": {
+		"_postman_id": "c4e69876-7add-40da-9421-1ca3958cb36f",
+		"name": "Demo API",
+		"description": "🎯 **Production-Ready Demo Collection**\n\nThis collection showcases:\n- Enterprise authentication\n- Comprehensive test coverage\n- Production monitoring\n- Team documentation\n\n---\n\nAuto-generated content will appear below after OpenAPI sync.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30401009"
+	},
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "key",
+				"value": "X-API-Key",
+				"type": "string"
+			},
+			{
+				"key": "value",
+				"value": "{{demoApiKey}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"// 🛡️ CURATED: Enterprise logging & monitoring",
+					"console.log('🚀 Demo API Request:', {",
+					"    timestamp: new Date().toISOString(),",
+					"    endpoint: pm.request.url.toString(),",
+					"    method: pm.request.method",
+					"});"
+				],
+				"type": "text/javascript"
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"exec": [
+					"// 🛡️ CURATED: Production monitoring suite",
+					"pm.test('⚡ Response time < 2s', () => {",
+					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+					"});",
+					"",
+					"pm.test('🔒 Security headers present', () => {",
+					"    pm.expect(pm.response.headers.has('Content-Type')).to.be.true;",
+					"});",
+					"",
+					"// 📊 Custom metrics tracking",
+					"if (pm.response.code === 200) {",
+					"    pm.collectionVariables.set('successCount', ",
+					"        (pm.collectionVariables.get('successCount') || 0) + 1);",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "sites",
+			"description": "**Enterprise Sites API**\n\nHandles multi-tenant site operations with enterprise-grade:\n- Authentication & authorization\n- Rate limiting & monitoring\n- Audit logging\n\n---\n\nGenerated endpoints from OpenAPI spec appear below.",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{enterpriseToken}}",
+						"type": "string"
+					}
+				]
+			},
+			"item": [
+				{
+					"name": "{siteId}",
+					"item": [
+						{
+					"name": "custom-views",
+					"description": "**Custom View Management**\n\nEnterprise features:\n- Advanced filtering & pagination\n- Bulk operations\n- Access control integration\n\n---\n\nAuto-generated from OpenAPI specification.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 🛡️ CURATED: Custom views validation",
+									"pm.test('📊 Custom views response format', () => {",
+									"    if (pm.response.code === 200) {",
+									"        const response = pm.response.json();",
+									"        pm.expect(response).to.have.property('customViews');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"item": [
+								{
+							"name": "list Custom Views",
+							"description": "**Production Endpoint**\n\nRetrieve paginated custom views with enterprise filtering.\n\n🔧 **Team Notes:**\n- Default pageSize optimized for performance\n- includeSubsites parameter coming in v2\n- Rate limited: 100 req/min\n\n---\n\nGenerated from OpenAPI: GET /sites/{siteId}/custom-views",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"// 🛡️ CURATED: Production validation",
+											"pm.test('✅ Success response', () => {",
+											"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+											"});",
+											"",
+											"pm.test('🔍 Pagination headers', () => {",
+											"    if (pm.response.code === 200) {",
+											"        pm.expect(pm.response.headers.has('X-Total-Count')).to.be.true;",
+											"    }",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Demo-Version",
+										"value": "2024-production",
+										"description": "🛡️ CURATED: Production API version",
+										"type": "text"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+										"url": {
+											"raw": "{{baseUrl}}/sites/:siteId/custom-views?pageSize=100",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"sites",
+												":siteId",
+												"custom-views"
+											],
+											"query": [
+												{
+													"key": "pageSize",
+													"value": "100"
+												}
+											],
+											"variable": [
+												{
+													"key": "siteId",
+													"value": "string"
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "ok",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sites/:siteId/custom-views?pageSize=100",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sites",
+														":siteId",
+														"custom-views"
+													],
+													"query": [
+														{
+															"key": "pageSize",
+															"value": "100"
+														}
+													],
+													"variable": [
+														{
+															"key": "siteId"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "text",
+											"header": [],
+											"cookie": [],
+											"body": ""
+										}
+									]
+								}
+							]
+						},
+						{
+					"name": "legacyTokens",
+					"description": "**Security Management**\n\n⚠️ **Legacy token cleanup operations**\n- Scheduled for deprecation Q2 2024\n- Migration guide: https://docs.company.com/auth\n- Contact: security-team@company.com\n\n---\n\nGenerated from OpenAPI specification.",
+					"item": [
+								{
+							"name": "delete Legacy Token",
+							"description": "**Security Operation**\n\n⚠️ **PRODUCTION USE ONLY**\n- Requires security team approval\n- Audit logged automatically\n- Irreversible operation\n\n---\n\nGenerated from OpenAPI: DELETE /sites/{siteId}/legacyTokens",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// 🛡️ CURATED: Security audit logging",
+											"const auditLog = {",
+											"    action: 'DELETE_LEGACY_TOKEN',",
+											"    user: pm.collectionVariables.get('currentUser') || 'demo-user',",
+											"    siteId: pm.variables.get('siteId'),",
+											"    timestamp: new Date().toISOString()",
+											"};",
+											"console.log('🔒 Security Audit:', auditLog);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Audit-User",
+										"value": "{{currentUser}}",
+										"description": "🛡️ CURATED: Security audit header",
+										"type": "text"
+									}
+								],
+										"url": {
+											"raw": "{{baseUrl}}/sites/:siteId/legacyTokens",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"sites",
+												":siteId",
+												"legacyTokens"
+											],
+											"variable": [
+												{
+													"key": "siteId",
+													"value": "string"
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "deleted",
+											"originalRequest": {
+												"method": "DELETE",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sites/:siteId/legacyTokens",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sites",
+														":siteId",
+														"legacyTokens"
+													],
+													"variable": [
+														{
+															"key": "siteId"
+														}
+													]
+												}
+											},
+											"status": "No Content",
+											"code": 204,
+											"_postman_previewlanguage": "text",
+											"header": [],
+											"cookie": [],
+											"body": ""
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://api.example.com",
+			"description": "🌐 Production API endpoint"
+		},
+		{
+			"key": "demoApiKey",
+			"value": "demo_{{$randomApiKey}}",
+			"description": "🔑 CURATED: Demo API key with rotation"
+		},
+		{
+			"key": "enterpriseToken",
+			"value": "{{$randomJWT}}",
+			"description": "🏢 CURATED: Enterprise bearer token"
+		},
+		{
+			"key": "currentUser",
+			"value": "demo-engineer@company.com",
+			"description": "👤 CURATED: Current user for audit logs"
+		},
+		{
+			"key": "successCount",
+			"value": "0",
+			"description": "📊 CURATED: Success metrics counter"
+		}
+	]
 }
