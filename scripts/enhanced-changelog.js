@@ -15,14 +15,37 @@ const argv = yargs(process.argv.slice(2))
   .strict().argv;
 
 function generateEnhancedChangelog(before, after) {
-  // Start with existing changelog logic...
-  const existingChangelog = require('./changelog.js');
-  
   let output = '# Semantic Collection Changes\n\n';
   
-  // API Evolution (existing functionality)
+  // API Evolution - detect actual endpoint changes
   output += '## 🔄 API Evolution\n';
-  output += '<!-- Structural endpoint changes -->\n';
+  
+  const apiChanges = detectApiChanges(before, after);
+  
+  if (apiChanges.added.length > 0) {
+    output += '\n### ➕ **Added Endpoints**\n';
+    apiChanges.added.forEach(endpoint => {
+      output += `- \`${endpoint.method} ${endpoint.path}\` - ${endpoint.name}\n`;
+    });
+  }
+  
+  if (apiChanges.removed.length > 0) {
+    output += '\n### ➖ **Removed Endpoints**\n';
+    apiChanges.removed.forEach(endpoint => {
+      output += `- \`${endpoint.method} ${endpoint.path}\` - ${endpoint.name}\n`;
+    });
+  }
+  
+  if (apiChanges.modified.length > 0) {
+    output += '\n### 🔄 **Modified Endpoints**\n';
+    apiChanges.modified.forEach(endpoint => {
+      output += `- \`${endpoint.method} ${endpoint.path}\` - ${endpoint.changes.join(', ')}\n`;
+    });
+  }
+  
+  if (apiChanges.added.length === 0 && apiChanges.removed.length === 0 && apiChanges.modified.length === 0) {
+    output += '\nNo structural API changes detected.\n';
+  }
   
   if (argv.includePreserved) {
     // NEW: Curated Content Preservation Report
@@ -36,12 +59,118 @@ function generateEnhancedChangelog(before, after) {
     
     // NEW: Change Impact Analysis
     output += '\n## 📊 Change Impact\n';
-    output += `- **Semantic changes**: ${preservation.semanticChanges} meaningful API modifications\n`;
+    output += `- **Semantic changes**: ${apiChanges.added.length + apiChanges.removed.length + apiChanges.modified.length} meaningful API modifications\n`;
     output += `- **Format changes**: Ignored (XML↔JSON, whitespace, etc.)\n`;
     output += `- **Curation impact**: Zero (${preservation.totalPreserved} items protected)\n`;
   }
   
   return output;
+}
+
+function detectApiChanges(before, after) {
+  const beforeEndpoints = extractEndpoints(before);
+  const afterEndpoints = extractEndpoints(after);
+  
+  const beforeKeys = new Set(beforeEndpoints.map(e => `${e.method}:${e.path}`));
+  const afterKeys = new Set(afterEndpoints.map(e => `${e.method}:${e.path}`));
+  
+  // Find added endpoints
+  const added = afterEndpoints.filter(e => !beforeKeys.has(`${e.method}:${e.path}`));
+  
+  // Find removed endpoints  
+  const removed = beforeEndpoints.filter(e => !afterKeys.has(`${e.method}:${e.path}`));
+  
+  // Find modified endpoints (same method+path, different parameters/structure)
+  const modified = [];
+  afterEndpoints.forEach(afterEndpoint => {
+    const key = `${afterEndpoint.method}:${afterEndpoint.path}`;
+    if (beforeKeys.has(key)) {
+      const beforeEndpoint = beforeEndpoints.find(e => `${e.method}:${e.path}` === key);
+      const changes = detectEndpointChanges(beforeEndpoint, afterEndpoint);
+      if (changes.length > 0) {
+        modified.push({
+          ...afterEndpoint,
+          changes
+        });
+      }
+    }
+  });
+  
+  return { added, removed, modified };
+}
+
+function extractEndpoints(collection) {
+  const endpoints = [];
+  
+  function traverseItems(items, pathPrefix = '') {
+    items.forEach(item => {
+      if (item.request) {
+        // This is a request item
+        const method = item.request.method;
+        const url = item.request.url;
+        let path = '';
+        
+        if (typeof url === 'string') {
+          // Extract path from raw URL
+          path = url.replace(/{{[^}]+}}/g, '').split('?')[0];
+        } else if (url && url.path) {
+          // Extract path from structured URL
+          path = '/' + url.path.filter(p => p && p !== '').map(p => p.startsWith(':') ? `{${p.slice(1)}}` : p).join('/');
+        }
+        
+        endpoints.push({
+          name: item.name,
+          method: method,
+          path: path,
+          queryParams: extractQueryParams(url),
+          headers: extractHeaders(item.request.header || [])
+        });
+      } else if (item.item) {
+        // This is a folder, recurse
+        traverseItems(item.item, pathPrefix);
+      }
+    });
+  }
+  
+  if (collection.item) {
+    traverseItems(collection.item);
+  }
+  
+  return endpoints;
+}
+
+function extractQueryParams(url) {
+  const params = [];
+  if (url && url.query) {
+    url.query.forEach(q => {
+      params.push(q.key);
+    });
+  }
+  return params;
+}
+
+function extractHeaders(headers) {
+  return headers.map(h => h.key);
+}
+
+function detectEndpointChanges(before, after) {
+  const changes = [];
+  
+  // Check for new query parameters
+  const beforeParams = new Set(before.queryParams);
+  const afterParams = new Set(after.queryParams);
+  
+  const newParams = after.queryParams.filter(p => !beforeParams.has(p));
+  const removedParams = before.queryParams.filter(p => !afterParams.has(p));
+  
+  if (newParams.length > 0) {
+    changes.push(`added query params: ${newParams.join(', ')}`);
+  }
+  if (removedParams.length > 0) {
+    changes.push(`removed query params: ${removedParams.join(', ')}`);
+  }
+  
+  return changes;
 }
 
 function analyzePreservation(before, after) {
