@@ -9,9 +9,9 @@
 - `GET /sites/{siteId}/custom-views` - added query params: includeSubsites
 
 ## ✅ Preserved Curated Content
-- **Test Scripts**: 5 → 5 (✅ Preserved)
+- **Test Scripts**: 2 → 2 (✅ Preserved)
 - **Auth Configs**: 2 → 4 (❌ Changed)
-- **Custom Headers**: 23 preserved
+- **Custom Headers**: 26 preserved
 - **Custom Descriptions**: 6 with delimiters preserved
 
 ## 📊 Change Impact
