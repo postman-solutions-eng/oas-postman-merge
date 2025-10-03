@@ -5,7 +5,7 @@ on:
     branches:
       - "**"
     paths:
-      - "openapi/**"
+      - "openapi/demo-v2.yaml"
       - "collections/working.json"
       - "CHANGELOG.md"
   pull_request:
