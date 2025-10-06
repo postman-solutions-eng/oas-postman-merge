@@ -38,7 +38,10 @@ jobs:
           for f in openapi/*.*; do
             base=$(basename "$f")
             out="ref/${base%.*}.postman_collection.json"
+            # Generate collection with openapi2postmanv2
             openapi2postmanv2 -s "$f" -o "$out" -p
+            # Fix flat folder structure and parameter spacing issues
+            node scripts/fix-collection-structure.js "$out" "$out"
           done
 
       - name: Merge Reference → Working (write merged artifact)
