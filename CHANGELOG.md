@@ -12,7 +12,7 @@
 - **Test Scripts**: 2 → 2 (✅ Preserved)
 - **Auth Configs**: 2 → 4 (❌ Changed)
 - **Custom Headers**: 26 preserved
-- **Custom Descriptions**: 6 with delimiters preserved
+- **Custom Descriptions**: 4 with delimiters preserved
 
 ## 📊 Change Impact
 - **Semantic changes**: 2 meaningful API modifications
