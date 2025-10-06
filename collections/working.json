@@ -198,7 +198,6 @@
               },
               "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
             },
-            "description": {},
             "header": [
               {
                 "key": "Content-Type",
@@ -303,6 +302,7 @@
           "description": "Retrieves a list of custom views for a given site.\n\nInternal Note: This endpoint is heavily used by the reporting dashboard.\n---",
           "name": "list Custom Views",
           "request": {
+            "description": "",
             "header": [
               {
                 "key": "Accept",
@@ -325,14 +325,23 @@
               ],
               "query": [
                 {
+                  "disabled": false,
+                  "key": "includeSubsites",
+                  "value": "<boolean>"
+                },
+                {
+                  "disabled": false,
                   "key": "pageSize",
                   "value": "100"
                 }
               ],
               "variable": [
                 {
+                  "description": "(Required) ",
+                  "disabled": false,
                   "key": "siteId",
-                  "value": "string"
+                  "type": "any",
+                  "value": "<string>"
                 }
               ]
             }

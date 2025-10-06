@@ -2,19 +2,15 @@
 
 ## 🔄 API Evolution
 
-### ➕ **Added Endpoints**
-- `POST /sites/{siteId}/custom-views/{customViewId}/share` - share Custom View
-
-### 🔄 **Modified Endpoints**
-- `GET /sites/{siteId}/custom-views` - added query params: includeSubsites
+No structural API changes detected.
 
 ## ✅ Preserved Curated Content
 - **Test Scripts**: 2 → 2 (✅ Preserved)
-- **Auth Configs**: 2 → 4 (❌ Changed)
-- **Custom Headers**: 26 preserved
+- **Auth Configs**: 2 → 2 (✅ Preserved)
+- **Custom Headers**: 27 preserved
 - **Custom Descriptions**: 6 with delimiters preserved
 
 ## 📊 Change Impact
-- **Semantic changes**: 2 meaningful API modifications
+- **Semantic changes**: 0 meaningful API modifications
 - **Format changes**: Ignored (XML↔JSON, whitespace, etc.)
-- **Curation impact**: Zero (32 items protected)
+- **Curation impact**: Zero (31 items protected)
