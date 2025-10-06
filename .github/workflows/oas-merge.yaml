@@ -17,8 +17,6 @@ permissions:
 
 jobs:
   merge:
-    # Only run when OpenAPI files change (not when working.json changes from PR merge)
-    if: contains(github.event.head_commit.modified, 'openapi/') || contains(github.event.head_commit.added, 'openapi/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,8 +80,8 @@ jobs:
             CHANGELOG.md
 
   publish:
-    # Only run when working.json changes (indicating PR merge) on main/video-demo branches
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/video-demo') && (contains(github.event.head_commit.modified, 'collections/working.json') || contains(github.event.head_commit.added, 'collections/working.json'))
+    # Only run when merging PR (detected by commit message) on main/video-demo branches  
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/video-demo') && contains(github.event.head_commit.message, 'OAS merge:')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
