@@ -7,7 +7,6 @@ on:
     paths:
       - "openapi/demo-v2.yaml"
       - "collections/working.json"
-      - "CHANGELOG.md"
   pull_request:
     paths:
       - "openapi/**"
@@ -18,6 +17,8 @@ permissions:
 
 jobs:
   merge:
+    # Only run when OpenAPI files change (not when working.json changes from PR merge)
+    if: contains(github.event.head_commit.modified, 'openapi/') || contains(github.event.head_commit.added, 'openapi/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,8 +82,8 @@ jobs:
             CHANGELOG.md
 
   publish:
-    needs: merge
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/video-demo')
+    # Only run when working.json changes (indicating PR merge) on main/video-demo branches
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/video-demo') && (contains(github.event.head_commit.modified, 'collections/working.json') || contains(github.event.head_commit.added, 'collections/working.json'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
