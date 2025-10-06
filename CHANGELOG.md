@@ -11,10 +11,10 @@
 ## ✅ Preserved Curated Content
 - **Test Scripts**: 2 → 2 (✅ Preserved)
 - **Auth Configs**: 2 → 4 (❌ Changed)
-- **Custom Headers**: 26 preserved
+- **Custom Headers**: 23 preserved
 - **Custom Descriptions**: 4 with delimiters preserved
 
 ## 📊 Change Impact
 - **Semantic changes**: 2 meaningful API modifications
 - **Format changes**: Ignored (XML↔JSON, whitespace, etc.)
-- **Curation impact**: Zero (32 items protected)
+- **Curation impact**: Zero (29 items protected)
