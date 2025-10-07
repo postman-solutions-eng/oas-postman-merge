@@ -179,7 +179,6 @@
                               },
                               "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
                             },
-                            "description": {},
                             "header": [
                               {
                                 "key": "Content-Type",
@@ -286,6 +285,7 @@
         {
           "name": "list Custom Views",
           "request": {
+            "description": "",
             "header": [
               {
                 "key": "Accept",
@@ -308,14 +308,23 @@
               ],
               "query": [
                 {
+                  "disabled": false,
+                  "key": "includeSubsites",
+                  "value": "<boolean>"
+                },
+                {
+                  "disabled": false,
                   "key": "pageSize",
                   "value": "100"
                 }
               ],
               "variable": [
                 {
+                  "description": "(Required) ",
+                  "disabled": false,
                   "key": "siteId",
-                  "value": "string"
+                  "type": "any",
+                  "value": "<string>"
                 }
               ]
             }
