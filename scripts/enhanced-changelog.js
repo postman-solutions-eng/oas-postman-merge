@@ -52,8 +52,25 @@ function generateEnhancedChangelog(before, after) {
     output += '\n## ✅ Preserved Curated Content\n';
     
     const preservation = analyzePreservation(before, after);
-    output += `- **Test Scripts**: ${preservation.scripts.before} → ${preservation.scripts.after} (${preservation.scripts.preserved ? '✅ Preserved' : '❌ Changed'})\n`;
-    output += `- **Auth Configs**: ${preservation.auth.before} → ${preservation.auth.after} (${preservation.auth.preserved ? '✅ Preserved' : '❌ Changed'})\n`;
+    // Test Scripts with locations
+    if (preservation.scripts.preserved) {
+      output += `- **Test Scripts**: ${preservation.scripts.before} → ${preservation.scripts.after} (✅ Preserved)\n`;
+      if (preservation.scripts.details && preservation.scripts.details.length > 0) {
+        output += `  - Locations: ${preservation.scripts.details.join(', ')}\n`;
+      }
+    } else {
+      output += `- **Test Scripts**: ${preservation.scripts.before} → ${preservation.scripts.after} (❌ Changed)\n`;
+    }
+    
+    // Auth Configs with locations
+    if (preservation.auth.preserved) {
+      output += `- **Auth Configs**: ${preservation.auth.before} → ${preservation.auth.after} (✅ Preserved)\n`;
+      if (preservation.auth.details && preservation.auth.details.length > 0) {
+        output += `  - Locations: ${preservation.auth.details.join(', ')}\n`;
+      }
+    } else {
+      output += `- **Auth Configs**: ${preservation.auth.before} → ${preservation.auth.after} (❌ Changed)\n`;
+    }
     
     // Verbose header reporting
     if (preservation.headers.count > 0) {
