@@ -13,8 +13,11 @@ npm install
 
 ### 2. Install OpenAPI Converter
 ```bash
+# We use this as a CLI tool (not a library dependency)
 npm install -g openapi-to-postmanv2@latest
 ```
+
+> **Why separate?** The merge tool calls `openapi2postmanv2` as a command-line tool to convert your OpenAPI specs. It's kept separate so you can use any version and it doesn't bloat the main package.
 
 ## 📁 Prepare Your Files
 
