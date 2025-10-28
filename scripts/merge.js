@@ -8,35 +8,158 @@ const yargs = require('yargs');
 // const { hideBin } = require('yargs/helpers');
 
 const argv = yargs(process.argv.slice(2))
-  .option('config',  { type: 'string', demandOption: true })
-  .option('working', { type: 'string', demandOption: true })
-  .option('refdir',  { type: 'string', demandOption: true })
-  .option('out',     { type: 'string', demandOption: true })
+  .option('config',  { 
+    type: 'string', 
+    demandOption: true,
+    describe: 'Path to merge configuration YAML file'
+  })
+  .option('working', { 
+    type: 'string', 
+    demandOption: true,
+    describe: 'Path to working Postman collection JSON file'
+  })
+  .option('refdir',  { 
+    type: 'string', 
+    demandOption: true,
+    describe: 'Directory containing reference collections'
+  })
+  .option('out',     { 
+    type: 'string', 
+    demandOption: true,
+    describe: 'Output path for merged collection'
+  })
   .strict()
+  .help()
+  .version()
   .argv;
 
 // ---------- utils
 const deepClone = (o) => JSON.parse(JSON.stringify(o || null));
 const asArray = (x) => Array.isArray(x) ? x : (x == null ? [] : [x]);
 
-function readJSON(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-function writeJSON(p, j) { fs.writeFileSync(p, JSON.stringify(j, null, 4)); }
+// Enhanced logging
+function log(message, level = 'info') {
+  const timestamp = new Date().toISOString();
+  const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+  console.log(`${prefix} [${timestamp}] ${message}`);
+}
 
-function loadConfig(p) {
-  const txt = fs.readFileSync(p, 'utf8');
-  const doc = yaml.load(txt) || {};
-  const defaults = {
-    services: [],
-    options: {
-      preferOperationId: true,
-      keepWorkingItemName: true,
-      descriptionDelimiter: '\n---\n',
-      tagNew: 'status:new',
-      retireMode: 'move', // move | skip | delete
-      order: 'keep'       // keep | alpha
+// Security: Validate file paths to prevent path traversal
+function validatePath(filePath, description) {
+  if (!filePath || typeof filePath !== 'string') {
+    throw new Error(`Invalid ${description}: path must be a non-empty string`);
+  }
+  
+  // Check for path traversal attempts
+  if (filePath.includes('..') || filePath.includes('\0')) {
+    throw new Error(`Invalid ${description}: path contains potentially dangerous characters`);
+  }
+  
+  // Resolve to absolute path to prevent confusion
+  return path.resolve(filePath);
+}
+
+// Validate collection structure
+function validateCollection(collection, filePath) {
+  if (!collection || typeof collection !== 'object') {
+    throw new Error(`Invalid collection in ${filePath}: must be a JSON object`);
+  }
+  
+  if (!collection.info || typeof collection.info.name !== 'string') {
+    throw new Error(`Invalid collection in ${filePath}: missing or invalid info.name`);
+  }
+  
+  // Warn about large collections (potential performance issue)
+  const collectionStr = JSON.stringify(collection);
+  const sizeMB = Buffer.byteLength(collectionStr, 'utf8') / (1024 * 1024);
+  if (sizeMB > 50) {
+    log(`Warning: Large collection detected (${sizeMB.toFixed(1)}MB). Performance may be affected.`, 'warn');
+  }
+}
+
+function readJSON(filePath) {
+  try {
+    const safePath = validatePath(filePath, 'JSON file path');
+    
+    if (!fs.existsSync(safePath)) {
+      throw new Error(`File not found: ${safePath}`);
     }
-  };
-  return { ...defaults, ...doc, options: { ...defaults.options, ...(doc.options || {}) } };
+    
+    const content = fs.readFileSync(safePath, 'utf8');
+    const data = JSON.parse(content);
+    
+    // Validate if it looks like a Postman collection
+    if (filePath.includes('collection') || filePath.includes('working')) {
+      validateCollection(data, safePath);
+    }
+    
+    return data;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid JSON in file ${filePath}: ${error.message}`);
+    }
+    throw new Error(`Failed to read JSON file ${filePath}: ${error.message}`);
+  }
+}
+
+function writeJSON(filePath, data) {
+  try {
+    const safePath = validatePath(filePath, 'output file path');
+    
+    // Ensure directory exists
+    const dir = path.dirname(safePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    // Validate data before writing
+    if (data && typeof data === 'object' && data.info && data.info.name) {
+      validateCollection(data, safePath);
+    }
+    
+    const jsonString = JSON.stringify(data, null, 4);
+    fs.writeFileSync(safePath, jsonString);
+    log(`Successfully wrote ${jsonString.length} characters to ${safePath}`);
+  } catch (error) {
+    throw new Error(`Failed to write JSON file ${filePath}: ${error.message}`);
+  }
+}
+
+function loadConfig(configPath) {
+  try {
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`Config file not found: ${configPath}`);
+    }
+    
+    const txt = fs.readFileSync(configPath, 'utf8');
+    const doc = yaml.load(txt) || {};
+    
+    const defaults = {
+      services: [],
+      options: {
+        preferOperationId: true,
+        keepWorkingItemName: true,
+        descriptionDelimiter: '\n---\n',
+        tagNew: 'status:new',
+        retireMode: 'move', // move | skip | delete
+        order: 'keep'       // keep | alpha
+      }
+    };
+    
+    const config = { ...defaults, ...doc, options: { ...defaults.options, ...(doc.options || {}) } };
+    
+    // Validate config
+    if (!config.services || config.services.length === 0) {
+      log('Warning: No services defined in config', 'warn');
+    }
+    
+    return config;
+  } catch (error) {
+    if (error.name === 'YAMLException') {
+      throw new Error(`Invalid YAML in config file ${configPath}: ${error.message}`);
+    }
+    throw new Error(`Failed to load config file ${configPath}: ${error.message}`);
+  }
 }
 
 // Normalize a URL to "path/with/:vars" (no leading slash)
@@ -303,8 +426,45 @@ function main() {
   if (cfg.options.order === 'alpha') alphaOrderFolders(working);
 
   writeJSON(argv.out, working);
-  console.log(`Merged → ${argv.out}`);
-  console.log(`Updated: ${updated}  •  Added: ${added}  •  Retired: ${retired}`);
+  log(`Merge completed successfully → ${argv.out}`);
+  log(`Updated: ${updated}  •  Added: ${added}  •  Retired: ${retired}`);
 }
 
-main();
+// Main execution with error handling
+async function runMain() {
+  try {
+    // Validate all input paths first
+    const safeConfig = validatePath(argv.config, 'config file');
+    const safeWorking = validatePath(argv.working, 'working collection');
+    const safeRefdir = validatePath(argv.refdir, 'reference directory');
+    const safeOut = validatePath(argv.out, 'output file');
+    
+    log('Starting OAS → Postman merge process...');
+    log(`Config: ${safeConfig}`);
+    log(`Working: ${safeWorking}`);
+    log(`Reference dir: ${safeRefdir}`);
+    log(`Output: ${safeOut}`);
+    
+    // Check that reference directory exists
+    if (!fs.existsSync(safeRefdir)) {
+      throw new Error(`Reference directory not found: ${safeRefdir}`);
+    }
+    
+    main();
+    
+    log('✅ Merge process completed successfully');
+    process.exit(0);
+  } catch (error) {
+    log(`Merge failed: ${error.message}`, 'error');
+    
+    if (process.env.DEBUG) {
+      console.error('\nStack trace:', error.stack);
+    } else {
+      log('Run with DEBUG=1 for detailed error information', 'info');
+    }
+    
+    process.exit(1);
+  }
+}
+
+runMain();

@@ -6,11 +6,11 @@ paths:
     get:
       operationId: listCustomViews
       parameters:
-        - in: path   # required path param
+        - in: path
           name: siteId
           required: true
           schema: { type: string }
-        - in: query  # optional query param
+        - in: query
           name: pageSize
           required: false
           schema: { type: integer, default: 100 }

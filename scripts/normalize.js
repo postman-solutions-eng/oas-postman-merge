@@ -67,12 +67,56 @@ function normalizeAny(node, parentKey = '') {
   }
 }
 
-const file = process.argv[2];
-if (!file) {
-  console.error('usage: normalize.js <collection.json>');
-  process.exit(1);
+// Enhanced logging
+function log(message, level = 'info') {
+  const timestamp = new Date().toISOString();
+  const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+  console.log(`${prefix} [${timestamp}] ${message}`);
 }
-const coll = JSON.parse(fs.readFileSync(file, 'utf8'));
-normalizeAny(coll, '');
-fs.writeFileSync(file, JSON.stringify(coll, null, 4));
-console.log(`Normalized ${file}`);
+
+// Main execution with error handling
+async function runMain() {
+  try {
+    const file = process.argv[2];
+    if (!file) {
+      console.error('usage: normalize.js <collection.json>');
+      process.exit(1);
+    }
+
+    log(`Starting normalization of ${file}...`);
+    
+    if (!fs.existsSync(file)) {
+      throw new Error(`File not found: ${file}`);
+    }
+
+    const content = fs.readFileSync(file, 'utf8');
+    let coll;
+    
+    try {
+      coll = JSON.parse(content);
+    } catch (parseError) {
+      throw new Error(`Invalid JSON in file ${file}: ${parseError.message}`);
+    }
+
+    log('Normalizing collection structure...');
+    normalizeAny(coll, '');
+    
+    const normalizedContent = JSON.stringify(coll, null, 4);
+    fs.writeFileSync(file, normalizedContent);
+    
+    log(`✅ Successfully normalized ${file}`);
+    process.exit(0);
+  } catch (error) {
+    log(`Normalization failed: ${error.message}`, 'error');
+    
+    if (process.env.DEBUG) {
+      console.error('\nStack trace:', error.stack);
+    } else {
+      log('Run with DEBUG=1 for detailed error information', 'info');
+    }
+    
+    process.exit(1);
+  }
+}
+
+runMain();
