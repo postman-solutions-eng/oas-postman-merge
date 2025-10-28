@@ -1,6 +1,7 @@
 # dependencies
 node_modules/
 npm-debug.log*
+package-lock.json  # Prevent lock file churn during user testing
 
 # local environment/secrets
 .env
