@@ -205,10 +205,10 @@ function analyzePreservation(before, after) {
       after: countAuthConfigs(after), 
       preserved: countAuthConfigs(before) === countAuthConfigs(after)
     },
-    headers: countCustomHeaders(after),
-    descriptions: countCustomDescriptions(after),
+    headers: countCustomHeaders(after, before),
+    descriptions: countCustomDescriptions(after, before),
     semanticChanges: estimateSemanticChanges(before, after),
-    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after).count
+    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after, before).count
   };
 }
 
@@ -223,117 +223,114 @@ function countAuthConfigs(collection) {
 }
 
 function countCustomHeaders(after, before = null) {
-  // Count curated headers with detailed breakdown
-  const content = JSON.stringify(after);
-  const allHeaders = new Set();
-  
-  // Extract all headers from the collection
-  const headerMatches = content.match(/"key":\s*"([^"]+)"/g) || [];
-  headerMatches.forEach(match => {
-    const header = match.match(/"key":\s*"([^"]+)"/)[1];
-    allHeaders.add(header);
-  });
-  
-  // Standard headers that are typically auto-generated or common
-  const standardHeaders = new Set([
-    'Accept', 'Accept-Encoding', 'Authorization', 'Content-Type', 
-    'Content-Length', 'Host', 'User-Agent', 'Cache-Control',
-    'Connection', 'Cookie', 'Referer', 'Origin', 'Accept-Language',
-    'Content-Encoding', 'Date', 'ETag', 'Expires', 'Last-Modified',
-    'Location', 'Server', 'Transfer-Encoding', 'Vary', 'WWW-Authenticate'
-  ]);
-  
-  // Headers that look custom but are actually API standards
-  const commonApiHeaders = new Set([
-    // GitHub API standards
-    'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 
-    'X-GitHub-Media-Type', 'X-GitHub-Enterprise-Version', 'X-OAuth-Scopes',
-    'X-Accepted-OAuth-Scopes', 'X-Poll-Interval', 'X-CommonMarker-Version',
-    // Other common API patterns
-    'X-Request-ID', 'X-Response-Time', 'X-Powered-By', 'X-Frame-Options',
-    'X-Content-Type-Options', 'X-XSS-Protection', 'X-Forwarded-For'
-  ]);
+  if (!before) {
+    // Fallback to old approach if no before collection available
+    return { count: 0, details: [] };
+  }
 
-  // Find headers that are truly user-curated
-  const curatedHeaders = [];
-  allHeaders.forEach(header => {
-    // Skip standard HTTP headers  
-    if (standardHeaders.has(header)) {
-      return;
+  // Extract headers from both collections
+  function extractHeaders(collection) {
+    const headers = new Set();
+    const content = JSON.stringify(collection);
+    const headerMatches = content.match(/"key":\s*"([^"]+)"/g) || [];
+    headerMatches.forEach(match => {
+      const header = match.match(/"key":\s*"([^"]+)"/)[1];
+      headers.add(header);
+    });
+    return headers;
+  }
+
+  const beforeHeaders = extractHeaders(before);
+  const afterHeaders = extractHeaders(after);
+  
+  // Find headers that were preserved from the original (curated) collection
+  // These are headers that exist in both before and after, meaning they were in the original
+  // and were successfully preserved during the merge
+  const preservedCuratedHeaders = [];
+  beforeHeaders.forEach(header => {
+    if (afterHeaders.has(header)) {
+      preservedCuratedHeaders.push(header);
     }
-    
-    // Skip known API standard headers
-    if (commonApiHeaders.has(header)) {
-      return;
-    }
-    
-    // Count everything else as potentially custom
-    // This catches business prefixes, unusual headers, etc.
-    curatedHeaders.push(header);
   });
   
   return {
-    count: curatedHeaders.length,
-    details: curatedHeaders.sort()
+    count: preservedCuratedHeaders.length,
+    details: preservedCuratedHeaders.sort()
   };
 }
 
 function countCustomDescriptions(after, before = null) {
-  // Count descriptions with delimiter and show where they are
-  const content = JSON.stringify(after);
-  
-  // Find descriptions with delimiters and extract context
-  const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
+  if (!before) {
+    // Fallback: just count descriptions with delimiters in final collection
+    const content = JSON.stringify(after);
+    const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
+    return { count: descMatches.length, details: [] };
+  }
+
+  // Find descriptions that had delimiters in the original collection and were preserved
   const locations = [];
   
-  // Parse the collection structure to find where descriptions with --- exist
-  if (descMatches.length > 0) {
-    try {
-      const parsed = JSON.parse(content);
-      
-      // Check collection-level description
-      if (parsed.info && parsed.info.description && parsed.info.description.includes('---')) {
-        locations.push(`Collection: ${parsed.info.name || 'Root'}`);
-      }
-      
-      // Recursively check items (requests/folders)
-      function findDescriptionsInItems(items, path = []) {
-        if (!Array.isArray(items)) return;
-        
-        items.forEach(item => {
-          const currentPath = [...path, item.name].filter(Boolean);
-          
-          // Check if this item has a description with ---
-          if (item.description && item.description.includes('---')) {
-            const isFolder = item.item && Array.isArray(item.item);
-            const itemType = isFolder ? 'Folder' : 'Request';
-            
-            const pathStr = currentPath.length > 1 ? 
-              `${currentPath.slice(0, -1).join(' > ')} > ${itemType}: ${currentPath[currentPath.length - 1]}` :
-              `${itemType}: ${currentPath[0]}`;
-            locations.push(pathStr);
-          }
-          
-          // Recursively check nested items (folders)
-          if (item.item && Array.isArray(item.item)) {
-            findDescriptionsInItems(item.item, currentPath);
-          }
-        });
-      }
-      
-      if (parsed.item) {
-        findDescriptionsInItems(parsed.item);
-      }
-      
-    } catch (e) {
-      // Fallback if JSON parsing fails
-      locations.push(`${descMatches.length} item(s)`);
+  try {
+    const beforeParsed = JSON.parse(JSON.stringify(before));
+    const afterParsed = JSON.parse(JSON.stringify(after));
+    
+    // Check collection-level description
+    if (beforeParsed.info && beforeParsed.info.description && beforeParsed.info.description.includes('---') &&
+        afterParsed.info && afterParsed.info.description && afterParsed.info.description.includes('---')) {
+      locations.push(`Collection: ${afterParsed.info.name || 'Root'}`);
     }
+    
+    // Recursively check items for preserved curated descriptions
+    function findPreservedDescriptions(beforeItems, afterItems, path = []) {
+      if (!Array.isArray(beforeItems) || !Array.isArray(afterItems)) return;
+      
+      // Create maps to match items by name
+      const beforeMap = new Map();
+      const afterMap = new Map();
+      
+      beforeItems.forEach(item => beforeMap.set(item.name, item));
+      afterItems.forEach(item => afterMap.set(item.name, item));
+      
+      beforeMap.forEach((beforeItem, name) => {
+        const afterItem = afterMap.get(name);
+        if (!afterItem) return;
+        
+        const currentPath = [...path, name].filter(Boolean);
+        
+        // Check if this item had a curated description in before and still has it in after
+        if (beforeItem.description && beforeItem.description.includes('---') &&
+            afterItem.description && afterItem.description.includes('---')) {
+          
+          const isFolder = beforeItem.item && Array.isArray(beforeItem.item);
+          const itemType = isFolder ? 'Folder' : 'Request';
+          
+          const pathStr = currentPath.length > 1 ? 
+            `${currentPath.slice(0, -1).join(' > ')} > ${itemType}: ${currentPath[currentPath.length - 1]}` :
+            `${itemType}: ${currentPath[0]}`;
+          locations.push(pathStr);
+        }
+        
+        // Recursively check nested items
+        if (beforeItem.item && afterItem.item && Array.isArray(beforeItem.item) && Array.isArray(afterItem.item)) {
+          findPreservedDescriptions(beforeItem.item, afterItem.item, currentPath);
+        }
+      });
+    }
+    
+    if (beforeParsed.item && afterParsed.item) {
+      findPreservedDescriptions(beforeParsed.item, afterParsed.item);
+    }
+    
+  } catch (e) {
+    // Fallback to pattern counting
+    const content = JSON.stringify(after);
+    const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
+    return { count: descMatches.length, details: [`${descMatches.length} item(s)`] };
   }
   
   return {
-    count: descMatches.length,
-    details: locations.slice(0, 5) // Limit to first 5 to avoid spam
+    count: locations.length,
+    details: locations.slice(0, 5)
   };
 }
 
