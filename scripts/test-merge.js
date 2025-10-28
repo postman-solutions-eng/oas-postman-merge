@@ -53,7 +53,11 @@ async function runCommand(cmd, description) {
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
         console.log(`❌ ${description} failed:`);
-        console.log(stderr || stdout);
+        if (stderr && stderr.includes('openapi-to-postmanv2: command not found')) {
+          console.log('   Install the converter first: npm install -g openapi-to-postmanv2@latest');
+        } else {
+          console.log(stderr || stdout);
+        }
         reject(error);
       } else {
         console.log(`✅ ${description} complete\n`);
