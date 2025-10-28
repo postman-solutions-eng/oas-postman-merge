@@ -7,6 +7,12 @@ const path = require('path');
 console.log('🧪 OAS → Postman Test Merge');
 console.log('================================\n');
 
+// Auto-cleanup previous test artifacts for cleaner experience
+if (fs.existsSync('ref')) {
+  fs.rmSync('ref', { recursive: true, force: true });
+  console.log('🧹 Cleaned up previous test artifacts\n');
+}
+
 // Simple config detection
 let configFile = 'config/merge.config.yaml';
 if (fs.existsSync('config/my-test.config.yaml')) {
@@ -88,7 +94,13 @@ async function main() {
       'Merging collections while preserving curation'
     );
     
-    // Step 3: Generate changelog
+    // Step 3: Generate changelog (preserve previous if exists)
+    if (fs.existsSync('CHANGELOG.md')) {
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      fs.renameSync('CHANGELOG.md', `CHANGELOG.${timestamp}.md`);
+      console.log(`📋 Previous changelog saved as CHANGELOG.${timestamp}.md`);
+    }
+    
     await runCommand(
       `node scripts/enhanced-changelog.js --before "${collectionFile}" --after "${mergedFile}" --out CHANGELOG.md`,
       'Generating semantic changelog'

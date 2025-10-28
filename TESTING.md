@@ -36,6 +36,40 @@ cat CHANGELOG.md
 # File will be: collections/your-collection.merged.json
 ```
 
+## 🔄 Multiple Tests & Cleanup
+
+### Testing Different Specs/Collections
+```bash
+# Test 1: Your current files
+npm run test-merge
+
+# Test 2: Different spec (replace your files)
+cp /path/to/v2-spec.yaml openapi/my-api.yaml
+npm run test-merge  # Auto-cleans previous artifacts
+
+# Test 3: Different collection 
+cp /path/to/other-collection.json collections/my-collection.json
+npm run test-merge
+```
+
+### Manual Cleanup Between Tests
+```bash
+# Clean up all generated files to start fresh
+npm run clean
+
+# Shows what's preserved vs. cleaned:
+# ✅ Preserved: Your openapi/*.yaml and collections/*.json files
+# 🧹 Cleaned: ref/ folder, *.merged.json files, generated configs
+```
+
+### Previous Test Results
+The tool automatically **preserves previous changelogs** with timestamps:
+- `CHANGELOG.md` - Latest test results
+- `CHANGELOG.2024-10-28T14-30-15.md` - Previous test
+- `CHANGELOG.2024-10-28T14-25-32.md` - Earlier test
+
+So you can compare results across different API versions! 📊
+
 **That's it!** 🎉 The tool automatically:
 - Detects your OpenAPI spec and collection
 - Converts the spec to Postman format  

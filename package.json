@@ -13,7 +13,8 @@
     "test": "echo \"Tests coming soon - see GitHub Issues\" && exit 0",
     "normalize": "node scripts/normalize.js",
     "demo": "npm run merge && npm run changelog",
-    "test-merge": "node scripts/test-merge.js"
+    "test-merge": "node scripts/test-merge.js",
+    "clean": "node scripts/clean.js"
   },
   "keywords": [
     "openapi",
