@@ -31,6 +31,8 @@ npm install
 
 ## ⚡ Quick Start
 
+> **Want to test with your own collections?** See our **[Testing Guide](TESTING.md)** for step-by-step instructions with real collections and specs.
+
 ### 1. **Setup your files**
 ```bash
 # Your OpenAPI spec
@@ -177,6 +179,9 @@ npm run normalize collections/working.json
 # Get detailed error information
 DEBUG=1 oas-postman-merge --config config/merge.config.yaml ...
 ```
+
+### Testing with Your Own Collections
+- 🧪 **[Testing Guide](TESTING.md)** - Step-by-step guide for testing with real collections and specs
 
 ### Getting Help
 - 📖 **[Contributing Guide](CONTRIBUTING.md)** - Development and testing help
