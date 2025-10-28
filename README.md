@@ -55,11 +55,11 @@ npx openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection
 
 # Merge preserving curated content
 oas-postman-merge --config config/merge.config.yaml \
-  --working collections/working.json --refdir ref --out collections/working.merged.json
+  --working collections/my-collection.json --refdir ref --out collections/my-collection.merged.json
 
 # Generate semantic changelog
-oas-changelog --before collections/working.json \
-  --after collections/working.merged.json --out CHANGELOG.md
+oas-changelog --before collections/my-collection.json \
+  --after collections/my-collection.merged.json --out CHANGELOG.md
 ```
 
 ### 3. **Automated via GitHub Actions**
@@ -86,7 +86,7 @@ jobs:
 ## How It Works
 
 - Specs in `openapi/` are converted to **Reference collections**.
-- Reference is merged into `collections/working.json`:
+- Reference is merged into your working collection:
   - Updates only structural fields (method, URL, params, body).
   - Preserves curated content (auth, scripts, names, doc links).
   - New endpoints tagged `status:new`.
@@ -102,7 +102,7 @@ jobs:
 ## Repo Layout
 
 ```
-collections/working.json        # curated source of truth
+collections/my-collection.json  # curated source of truth
 openapi/*.yaml|json             # your OpenAPI specs
 config/merge.config.yaml        # mapping & options
 scripts/merge.js                # merge engine
@@ -155,13 +155,13 @@ options:
 ```bash
 # Ensure your config file paths are correct
 ls -la config/merge.config.yaml
-ls -la collections/working.json
+ls -la collections/my-collection.json
 ```
 
 **❌ "Invalid JSON" errors**  
 ```bash
 # Validate your collection file
-jq . collections/working.json > /dev/null && echo "Valid JSON" || echo "Invalid JSON"
+jq . collections/my-collection.json > /dev/null && echo "Valid JSON" || echo "Invalid JSON"
 ```
 
 **❌ Merge not preserving auth**
@@ -174,7 +174,7 @@ options:
 **❌ Large, noisy diffs**
 ```bash
 # Run normalize to clean up the JSON
-npm run normalize collections/working.json
+npm run normalize collections/my-collection.json
 ```
 
 ### Debug Mode

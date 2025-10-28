@@ -40,16 +40,14 @@ const collectionFiles = fs.readdirSync('collections/').filter(f =>
   f.endsWith('.json') && !f.includes('merged') && !f.includes('working')
 );
 
-let collectionFile = 'collections/working.json';
-if (collectionFiles.length > 0) {
-  collectionFile = `collections/${collectionFiles[0]}`;
-}
-
-if (!fs.existsSync(collectionFile)) {
-  console.log(`❌ No collection found at ${collectionFile}`);
+if (collectionFiles.length === 0) {
+  console.log('❌ No collection found in collections/ directory');
   console.log('   Export your Postman collection and place it in collections/');
+  console.log('   Example: collections/my-api-collection.json');
   process.exit(1);
 }
+
+const collectionFile = `collections/${collectionFiles[0]}`;
 
 console.log(`📦 Using collection: ${collectionFile}`);
 console.log(`⚙️  Using config: ${configFile}\n`);
