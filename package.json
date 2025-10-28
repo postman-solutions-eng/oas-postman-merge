@@ -12,7 +12,8 @@
     "changelog": "node scripts/enhanced-changelog.js --before collections/working.json --after collections/working.merged.json --out CHANGELOG.md",
     "test": "echo \"Tests coming soon - see GitHub Issues\" && exit 0",
     "normalize": "node scripts/normalize.js",
-    "demo": "npm run merge && npm run changelog"
+    "demo": "npm run merge && npm run changelog",
+    "test-merge": "node scripts/test-merge.js"
   },
   "keywords": [
     "openapi",

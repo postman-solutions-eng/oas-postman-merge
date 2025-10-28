@@ -1,114 +1,47 @@
 # Testing OAS → Postman Merge with Your Collections
 
-This guide helps you test the merge tool with your **real Postman collections and OpenAPI specs** to see how it preserves your curated content while keeping APIs in sync.
+**5-minute test** to see how the merge tool preserves your curated content while keeping your Postman collection in sync with your OpenAPI spec.
 
-## 🚀 Quick Setup
+## 🚀 Quick Test
 
-### 1. Clone and Install
+### 1. Setup
 ```bash
 git clone https://github.com/postman-solutions-eng/oas-postman-merge.git
 cd oas-postman-merge
 npm install
-```
-
-### 2. Install OpenAPI Converter
-```bash
-# We use this as a CLI tool (not a library dependency)
 npm install -g openapi-to-postmanv2@latest
 ```
 
-> **Why separate?** The merge tool calls `openapi2postmanv2` as a command-line tool to convert your OpenAPI specs. It's kept separate so you can use any version and it doesn't bloat the main package.
-
-## 📁 Prepare Your Files
-
-### Your OpenAPI Spec
-- **Location**: Place your OpenAPI spec in `openapi/your-api.yaml` (or `.json`)
-- **Requirements**: Valid OpenAPI 3.0+ specification
-- **Validation**: Test with `npx swagger-parser validate openapi/your-api.yaml`
-
-### Your Postman Collection
-- **Export**: Export your curated collection from Postman as JSON
-- **Location**: Place it as `collections/your-collection.json`
-- **Backup**: Keep a backup copy - the merge will modify this file
-
-## ⚙️ Configuration
-
-### Option 1: Use Example Config (Recommended)
-Copy and customize an example configuration:
-
+### 2. Add Your Files
 ```bash
-# For single API
-cp examples/configs/rest-api.config.yaml config/my-test.config.yaml
+# Put your OpenAPI spec here (YAML or JSON)
+cp /path/to/your-spec.yaml openapi/my-api.yaml
 
-# For microservices
-cp examples/configs/microservices.config.yaml config/my-test.config.yaml
+# Export your Postman collection as JSON and put it here
+cp /path/to/your-collection.json collections/my-collection.json
 ```
 
-### Option 2: Create Custom Config
-Create `config/my-test.config.yaml`:
-
-```yaml
-services:
-  - name: "My API"
-    spec: "openapi/your-api.yaml"          # ← Your OpenAPI spec
-    workingFolder: ["API v1"]              # ← Folder in your collection
-
-options:
-  # Preserve your custom request names
-  keepWorkingItemName: true
-  
-  # Use OpenAPI operationId when available
-  preferOperationId: true
-  
-  # Delimiter for separating curated vs generated docs
-  descriptionDelimiter: "\n---\n"
-  
-  # Tag new endpoints for easy identification
-  tagNew: "status:new"
-  
-  # What to do with removed endpoints
-  retireMode: "move"    # move | skip | delete
-  
-  # Keep your folder organization
-  order: "keep"         # keep | alpha
+### 3. Run the Test
+```bash
+# This does everything automatically: detect files → convert → merge → changelog
+npm run test-merge
 ```
 
-## 🔄 Running the Test
-
-### Step 1: Generate Reference Collection
+### 4. Check Results
 ```bash
-# Convert your OpenAPI spec to a Postman collection
-mkdir -p ref
-openapi-to-postmanv2 -s openapi/your-api.yaml -o ref/your-api.postman_collection.json -p
-```
-
-### Step 2: Run the Merge
-```bash
-# Merge while preserving your curated content
-node scripts/merge.js \
-  --config config/my-test.config.yaml \
-  --working collections/your-collection.json \
-  --refdir ref \
-  --out collections/your-collection.merged.json
-```
-
-### Step 3: Generate Changelog
-```bash
-# See what changed in human-readable format
-node scripts/enhanced-changelog.js \
-  --before collections/your-collection.json \
-  --after collections/your-collection.merged.json \
-  --out CHANGELOG.md
-```
-
-### Step 4: Review Results
-```bash
-# Look at the semantic changelog
+# See what changed
 cat CHANGELOG.md
 
 # Import the merged collection back into Postman
-# File: collections/your-collection.merged.json
+# File will be: collections/your-collection.merged.json
 ```
+
+**That's it!** 🎉 The tool automatically:
+- Detects your OpenAPI spec and collection
+- Converts the spec to Postman format  
+- Merges while preserving your auth, scripts, and headers
+- Generates a human-readable changelog
+- Normalizes the output for clean diffs
 
 ## 🔍 What to Look For
 
@@ -133,99 +66,80 @@ cat CHANGELOG.md
 - **Added Endpoints**: New API endpoints from your spec
 - **Modified Endpoints**: Changed parameters or methods
 - **Preserved Content**: Scripts, auth, headers, descriptions maintained
-- **Removed Endpoints**: Moved to `_retired` folder (if `retireMode: "move"`)
+- **Removed Endpoints**: Moved to `_retired` folder
 
-## 🐛 Common Issues & Solutions
+## 📤 Quick Feedback
 
-### Issue: "File not found" Error
-```bash
-# Check file paths match your config
-ls -la openapi/your-api.yaml
-ls -la collections/your-collection.json
-```
-
-### Issue: "Invalid OpenAPI spec"
-```bash
-# Validate your spec first
-npx swagger-parser validate openapi/your-api.yaml
-```
-
-### Issue: "Merge not preserving auth"
-**Solution**: Check your descriptions use the `---` delimiter:
-```markdown
-Custom auth setup instructions for our team.
-
-Important: Use the staging API key for testing.
----
-Generated from OpenAPI spec. Version 1.2.0
-```
-
-### Issue: Large, noisy diffs
-```bash
-# Normalize the JSON for cleaner diffs
-node scripts/normalize.js collections/your-collection.merged.json
-```
-
-### Issue: "Auth Configs Changed" in changelog
-This is normal when new endpoints are added (they get new auth configs). Only worry if your existing endpoint auth is lost.
-
-## 🧪 Advanced Testing Scenarios
-
-### Test 1: New Endpoints
-1. Add a new endpoint to your OpenAPI spec
-2. Run the merge
-3. Verify it appears tagged with `status:new`
-4. Check that existing endpoints are unchanged
-
-### Test 2: Modified Endpoints  
-1. Add a query parameter to an existing endpoint in your spec
-2. Run the merge
-3. Verify the parameter is added but your test scripts remain
-
-### Test 3: Removed Endpoints
-1. Remove an endpoint from your OpenAPI spec
-2. Run the merge with `retireMode: "move"`
-3. Verify it moves to `_retired` folder instead of being deleted
-
-### Test 4: Large Collections
-```bash
-# For collections with 100+ requests, enable debug logging
-DEBUG=1 node scripts/merge.js --config config/my-test.config.yaml ...
-```
-
-## 📤 Providing Feedback
-
-### What to Share
-When reporting results, include:
-
-1. **Collection size**: "~50 requests across 5 folders"
-2. **API type**: "REST API with OAuth 2.0"
-3. **What worked**: "All auth preserved, new endpoints tagged correctly"
-4. **Issues found**: "Custom header 'X-Correlation-ID' was lost"
-5. **Changelog snippet**: Copy relevant parts
-
-### Where to Report
+If this worked well (or didn't!), let us know:
 - 🐛 **Issues**: [GitHub Issues](https://github.com/postman-solutions-eng/oas-postman-merge/issues)
 - 💬 **Discussion**: [GitHub Discussions](https://github.com/postman-solutions-eng/oas-postman-merge/discussions)
-- 📧 **Direct feedback**: Include your use case and collection complexity
 
-## 🎯 Success Criteria
-
-**This tool is working well for you if:**
-
-✅ **Zero manual work**: No need to reconfigure auth, scripts, or headers after merge  
-✅ **Small, reviewable diffs**: Changes are clearly API evolution, not formatting noise  
-✅ **Reliable automation**: Can run this as part of your API development workflow  
-✅ **Team-friendly**: Other developers can understand what changed from the changelog  
-
-## 🚀 Next Steps
-
-If testing goes well:
-1. **Integrate with CI/CD**: Use the GitHub Actions workflow
-2. **Team adoption**: Share config examples with your team
-3. **Automation**: Set up automatic collection publishing to Postman
-4. **Monitoring**: Track API evolution over time with changelog history
+Include: Collection size (~50 requests), API type (REST with OAuth), what worked, any issues.
 
 ---
 
-**Thank you for helping test this tool!** Your real-world feedback will help make it better for the entire API community. 🙏
+## 🔧 Advanced Configuration
+
+### Custom Config File
+If you need more control, create `config/my-test.config.yaml`:
+
+```yaml
+services:
+  - name: "My API"
+    spec: "openapi/my-api.yaml"          # Your OpenAPI spec
+    workingFolder: ["API v1"]            # Folder in your collection (optional)
+
+options:
+  keepWorkingItemName: true              # Preserve custom request names
+  preferOperationId: true               # Use OpenAPI operationId when available
+  descriptionDelimiter: "\n---\n"       # Delimiter for curated vs generated docs
+  tagNew: "status:new"                  # Tag for new endpoints
+  retireMode: "move"                    # move | skip | delete for removed endpoints
+  order: "keep"                         # keep | alpha for folder organization
+```
+
+### Manual Workflow (Alternative to npm run test-merge)
+```bash
+# Step by step commands if you want more control
+mkdir -p ref
+openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection.json -p
+node scripts/merge.js --config config/my-test.config.yaml --working collections/my-collection.json --refdir ref --out collections/my-collection.merged.json
+node scripts/enhanced-changelog.js --before collections/my-collection.json --after collections/my-collection.merged.json --out CHANGELOG.md
+```
+
+## 🐛 Troubleshooting
+
+### "No OpenAPI spec found"
+- Place your `.yaml`, `.yml`, or `.json` spec in the `openapi/` directory
+- The test script auto-detects the first spec file it finds
+
+### "No collection found"
+- Export your Postman collection as JSON
+- Place it in the `collections/` directory
+- Avoid names with "merged" or "working" in them
+
+### "Invalid OpenAPI spec"
+```bash
+# Validate your spec first
+npx swagger-parser validate openapi/your-spec.yaml
+```
+
+### "Merge not preserving auth"
+Check your descriptions use the `---` delimiter:
+```markdown
+Custom auth setup for our team.
+---
+Generated from OpenAPI spec.
+```
+
+Everything above `---` is preserved, everything below gets updated.
+
+### Large Collections
+For 100+ requests, enable debug logging:
+```bash
+DEBUG=1 npm run test-merge
+```
+
+---
+
+**Thank you for testing!** 🙏 Your feedback helps make this tool better for the entire API community.
