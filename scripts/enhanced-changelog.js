@@ -228,15 +228,35 @@ function countCustomHeaders(after, before = null) {
     return { count: 0, details: [] };
   }
 
-  // Extract headers from both collections
+  // Extract headers from both collections - only from actual header arrays
   function extractHeaders(collection) {
     const headers = new Set();
-    const content = JSON.stringify(collection);
-    const headerMatches = content.match(/"key":\s*"([^"]+)"/g) || [];
-    headerMatches.forEach(match => {
-      const header = match.match(/"key":\s*"([^"]+)"/)[1];
-      headers.add(header);
-    });
+    
+    function walkItems(items) {
+      if (!Array.isArray(items)) return;
+      
+      items.forEach(item => {
+        // Check if this item has a request with headers
+        if (item.request && item.request.header && Array.isArray(item.request.header)) {
+          item.request.header.forEach(header => {
+            if (header.key) {
+              headers.add(header.key);
+            }
+          });
+        }
+        
+        // Recursively check nested items (folders)
+        if (item.item && Array.isArray(item.item)) {
+          walkItems(item.item);
+        }
+      });
+    }
+    
+    // Walk through all collection items
+    if (collection.item) {
+      walkItems(collection.item);
+    }
+    
     return headers;
   }
 
