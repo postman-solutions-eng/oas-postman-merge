@@ -1,0 +1,39 @@
+# Example configuration for a typical REST API
+# Use case: Standard CRUD operations with authentication
+
+services:
+  - name: "User Management API"
+    spec: "openapi/users-api.yaml"
+    workingFolder: ["Users"]
+  
+  - name: "Product Catalog API"
+    spec: "openapi/products-api.yaml"
+    workingFolder: ["Products"]
+
+options:
+  # Preserve custom request names (e.g. "Create User (with validation)")
+  keepWorkingItemName: true
+  
+  # Use operation IDs from OpenAPI as request names when available
+  preferOperationId: true
+  
+  # Delimiter for separating curated docs from generated docs
+  descriptionDelimiter: "\n---\n"
+  
+  # Tag new endpoints for easy identification
+  tagNew: "status:new"
+  
+  # Move retired endpoints to _retired folder instead of deleting
+  retireMode: "move"  # move | skip | delete
+  
+  # Keep existing folder order (don't alphabetize)
+  order: "keep"       # keep | alpha
+
+# Common patterns this config handles:
+# ✅ Authentication headers preserved in working collection
+# ✅ Test scripts for validation preserved
+# ✅ Custom documentation links preserved above ---
+# ✅ Environment variables in URLs/headers preserved
+# ✅ Custom request names preserved
+
+

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "9b22d509-8786-4af5-b450-fdd172794b6a",
 		"name": "Demo API",
-		"description": "This is our enterprise API collection, carefully curated by the team.\n\nInternal Docs: [https://internal.company.com/api-docs](https://internal.company.com/api-docs)  \nTeam Notes: Ensure all requests use the correct environment variables.\n\n---\n\nGenerated from OpenAPI spec.",
+		"description": "Example API collection demonstrating curation preservation during automated merges.\n\nCustom Documentation: [https://example.com/api-guide](https://example.com/api-guide)  \nTeam Notes: This collection shows how manual edits are preserved during OpenAPI synchronization.\n\n---\n\nGenerated from OpenAPI spec.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "30401009"
 	},
@@ -186,12 +186,12 @@
 									]
 								}
 							],
-							"description": "Endpoints for managing legacy tokens. **SECURITY WARNING**: These tokens are deprecated.\n\nAudit Policy: All deletions must be logged.\n---"
+							"description": "Endpoints for managing legacy tokens. **Note**: These tokens are deprecated in newer API versions.\n\nExample Policy: All deletions should be logged for audit purposes.\n---"
 						}
 					]
 				}
 			],
-			"description": "This folder contains all site management endpoints.\n\nTeam Lead: @john.doe\n---",
+			"description": "This folder contains all site management endpoints.\n\nMaintainer: Example Team\n---",
 			"auth": {
 				"type": "bearer",
 				"bearer": [

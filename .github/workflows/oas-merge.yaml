@@ -15,8 +15,70 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  NODE_VERSION: "20"
+  OPENAPI_VERSION: "latest"
+
 jobs:
+  # Validate inputs and run security checks
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      should-merge: ${{ steps.check-changes.outputs.should-merge }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need previous commit for comparison
+
+      - name: Setup Node (with npm cache)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci || npm i
+          npm i -g openapi-to-postmanv2@${{ env.OPENAPI_VERSION }} @apidevtools/swagger-parser
+
+      - name: Security audit dependencies
+        run: npm audit --audit-level moderate
+
+      - name: Validate OpenAPI specs
+        run: |
+          for f in openapi/*.*; do
+            echo "Validating $f..."
+            if [[ "$f" == *.yaml ]] || [[ "$f" == *.yml ]]; then
+              npx swagger-parser validate "$f" || {
+                echo "❌ Invalid OpenAPI spec: $f"
+                exit 1
+              }
+            fi
+          done
+
+      - name: Validate existing collections
+        run: |
+          if [ -f collections/working.json ]; then
+            echo "Validating working collection..."
+            jq empty collections/working.json || {
+              echo "❌ Invalid JSON in working collection"
+              exit 1
+            }
+          fi
+
+      - name: Check if merge should run
+        id: check-changes
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ] || git diff --name-only HEAD~1 | grep -E "(openapi/|collections/)" > /dev/null; then
+            echo "should-merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-merge=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No relevant changes detected, skipping merge"
+          fi
+
   merge:
+    needs: validate
+    if: needs.validate.outputs.should-merge == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,38 +86,74 @@ jobs:
       - name: Setup Node (with npm cache)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           npm ci || npm i
-          npm i -g openapi-to-postmanv2@latest
+          npm i -g openapi-to-postmanv2@${{ env.OPENAPI_VERSION }}
 
       - name: Build Reference collections
         run: |
           mkdir -p ref
+          echo "Converting OpenAPI specs to Postman collections..."
+          
           for f in openapi/*.*; do
             base=$(basename "$f")
             out="ref/${base%.*}.postman_collection.json"
-            openapi2postmanv2 -s "$f" -o "$out" -p
+            echo "Converting $f → $out"
+            
+            openapi2postmanv2 -s "$f" -o "$out" -p || {
+              echo "❌ Failed to convert $f"
+              exit 1
+            }
+            
+            # Validate the generated collection
+            jq empty "$out" || {
+              echo "❌ Generated invalid JSON: $out"
+              exit 1
+            }
+            
+            echo "✅ Successfully converted $f"
           done
 
       - name: Merge Reference → Working (write merged artifact)
         run: |
-          node scripts/merge.js \
+          echo "Running merge process..."
+          
+          # Run with enhanced logging
+          DEBUG=1 node scripts/merge.js \
             --config config/merge.config.yaml \
             --working collections/working.json \
             --refdir ref \
-            --out collections/working.merged.json
+            --out collections/working.merged.json || {
+            echo "❌ Merge process failed"
+            exit 1
+          }
+          
+          # Validate merged output
+          jq empty collections/working.merged.json || {
+            echo "❌ Merge produced invalid JSON"
+            exit 1
+          }
+          
+          echo "✅ Merge completed successfully"
 
       # Generate changelog BEFORE copy/normalize so it reflects real adds/retires.
       - name: Generate changelog (pre-normalize)
         run: |
-          node scripts/enhanced-changelog.js \
+          echo "Generating semantic changelog..."
+          
+          DEBUG=1 node scripts/enhanced-changelog.js \
             --before collections/working.json \
             --after  collections/working.merged.json \
-            --out CHANGELOG.md
+            --out CHANGELOG.md || {
+            echo "❌ Changelog generation failed"
+            exit 1
+          }
+          
+          echo "✅ Changelog generated successfully"
 
       - name: Copy merged over Working (stage for PR)
         run: cp collections/working.merged.json collections/working.json
@@ -68,16 +166,37 @@ jobs:
           jq -S . collections/working.json > collections/working.sorted.json
           mv collections/working.sorted.json collections/working.json
 
+      - name: Validate final output
+        run: |
+          echo "Final validation of merged collection..."
+          
+          # Ensure it's valid JSON
+          jq empty collections/working.json || {
+            echo "❌ Final collection is invalid JSON"
+            exit 1
+          }
+          
+          # Check it has required Postman collection structure
+          if ! jq -e '.info.name' collections/working.json > /dev/null; then
+            echo "❌ Missing required collection info.name"
+            exit 1
+          fi
+          
+          echo "✅ Final collection validation passed"
+
       - name: Commit and open/update PR
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "OAS merge: update Working collection"
-          title: "OAS merge: update Working collection"
+          title: "🔄 OAS merge: update Working collection"
           body-path: CHANGELOG.md
           branch: oas-merge/update-working
           add-paths: |
             collections/working.json
             CHANGELOG.md
+          labels: |
+            automation
+            postman-merge
 
   publish:
     # Only run when merging PR (detected by commit message) on main/video-demo branches  
@@ -89,11 +208,51 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci || npm i
+
+      - name: Validate environment
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          WORKING_COLLECTION_UID: ${{ vars.WORKING_COLLECTION_UID }}
+        run: |
+          if [ -z "$POSTMAN_API_KEY" ]; then
+            echo "❌ POSTMAN_API_KEY secret not configured"
+            exit 1
+          fi
+          
+          if [ -z "$WORKING_COLLECTION_UID" ]; then
+            echo "❌ WORKING_COLLECTION_UID variable not configured"
+            exit 1
+          fi
+          
+          echo "✅ Environment validation passed"
+
+      - name: Validate collection before publish
+        run: |
+          FILE="collections/working.json"
+          
+          if [ ! -f "$FILE" ]; then
+            echo "❌ Working collection not found: $FILE"
+            exit 1
+          fi
+          
+          # Validate JSON structure
+          jq empty "$FILE" || {
+            echo "❌ Invalid JSON in working collection"
+            exit 1
+          }
+          
+          # Check collection has required fields
+          if ! jq -e '.info.name' "$FILE" > /dev/null; then
+            echo "❌ Collection missing required info.name"
+            exit 1
+          fi
+          
+          echo "✅ Collection validation passed"
 
       - name: Push merged Working back to Postman
         env:
@@ -101,7 +260,34 @@ jobs:
           WORKING_COLLECTION_UID: ${{ vars.WORKING_COLLECTION_UID }}
         run: |
           FILE="collections/working.json"
+          
+          echo "📤 Publishing collection to Postman..."
+          echo "Collection: $(jq -r '.info.name' "$FILE")"
+          echo "Target UID: $WORKING_COLLECTION_UID"
+          
+          # Create API payload
           jq -n --argjson c "$(cat "$FILE")" '{collection:$c}' > payload.json
-          curl -sS -X PUT -H "X-Api-Key: $POSTMAN_API_KEY" -H "Content-Type: application/json" \
-            -d @payload.json "https://api.getpostman.com/collections/$WORKING_COLLECTION_UID" \
-            | jq -r '.'
+          
+          # Make API call with error handling
+          response=$(curl -sS -w "\n%{http_code}" -X PUT \
+            -H "X-Api-Key: $POSTMAN_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            "https://api.getpostman.com/collections/$WORKING_COLLECTION_UID")
+          
+          # Parse response
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          # Check for success
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Successfully published to Postman"
+            echo "$body" | jq -r '.'
+          else
+            echo "❌ Failed to publish to Postman (HTTP $http_code)"
+            echo "$body" | jq -r '.' || echo "$body"
+            exit 1
+          fi
+          
+          # Clean up sensitive payload
+          rm -f payload.json

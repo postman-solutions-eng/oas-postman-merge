@@ -1,0 +1,52 @@
+# Example configuration for microservices architecture
+# Use case: Multiple services with different auth and deployment patterns
+
+services:
+  - name: "Authentication Service"
+    spec: "openapi/auth-service.yaml"
+    workingFolder: ["Auth"]
+    
+  - name: "User Profile Service"
+    spec: "openapi/user-service.yaml"
+    workingFolder: ["Users"]
+    
+  - name: "Order Management Service"
+    spec: "openapi/order-service.yaml"
+    workingFolder: ["Orders"]
+    
+  - name: "Payment Service"
+    spec: "openapi/payment-service.yaml"
+    workingFolder: ["Payments"]
+    
+  - name: "Notification Service"
+    spec: "openapi/notification-service.yaml"
+    workingFolder: ["Notifications"]
+
+options:
+  # Keep custom names for service-specific endpoints
+  keepWorkingItemName: true
+  
+  # Use operationId when available (good for microservices)
+  preferOperationId: true
+  
+  # Standard delimiter for curated content
+  descriptionDelimiter: "\n---\n"
+  
+  # Tag new endpoints per service
+  tagNew: "status:new"
+  
+  # Archive old endpoints (don't delete - might need for compatibility)
+  retireMode: "move"
+  
+  # Keep logical service grouping order
+  order: "keep"
+
+# Microservices-specific patterns this handles:
+# ✅ Each service gets its own folder structure
+# ✅ Service-specific auth configs preserved
+# ✅ Cross-service test workflows preserved
+# ✅ Environment-specific URLs (dev/staging/prod) preserved
+# ✅ Service discovery endpoints preserved
+# ✅ Health check customizations preserved
+
+

@@ -1,14 +1,56 @@
 {
-  "name": "postman-merge-demo",
-  "private": true,
+  "name": "oas-postman-merge",
+  "version": "1.0.0",
+  "description": "Automated tool to merge OpenAPI specs into Postman collections while preserving curated content (auth, scripts, docs)",
+  "main": "scripts/merge.js",
+  "bin": {
+    "oas-postman-merge": "./scripts/merge.js",
+    "oas-changelog": "./scripts/enhanced-changelog.js"
+  },
   "scripts": {
     "merge": "node scripts/merge.js --config config/merge.config.yaml --working collections/working.json --refdir ref --out collections/working.merged.json",
-    "changelog": "node scripts/changelog.js --before collections/working.json --after collections/working.merged.json --out CHANGELOG.md"
+    "changelog": "node scripts/enhanced-changelog.js --before collections/working.json --after collections/working.merged.json --out CHANGELOG.md",
+    "test": "echo \"Tests coming soon - see GitHub Issues\" && exit 0",
+    "normalize": "node scripts/normalize.js",
+    "demo": "npm run merge && npm run changelog"
+  },
+  "keywords": [
+    "openapi",
+    "postman",
+    "api",
+    "automation",
+    "merge",
+    "swagger",
+    "collection",
+    "testing",
+    "documentation",
+    "ci-cd"
+  ],
+  "author": "Postman Solutions Engineering",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/postman-solutions-eng/oas-postman-merge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/postman-solutions-eng/oas-postman-merge/issues"
+  },
+  "homepage": "https://github.com/postman-solutions-eng/oas-postman-merge#readme",
+  "engines": {
+    "node": ">=14.0.0"
   },
   "dependencies": {
     "fast-deep-equal": "^3.1.3",
     "js-yaml": "^4.1.0",
     "postman-collection": "^5.2.0",
     "yargs": "^16.2.0"
-  }
+  },
+  "devDependencies": {},
+  "files": [
+    "scripts/",
+    "config/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
 }

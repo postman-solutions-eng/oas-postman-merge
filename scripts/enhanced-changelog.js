@@ -206,7 +206,7 @@ function countAuthConfigs(collection) {
 function countCustomHeaders(collection) {
   // Count non-standard headers
   const content = JSON.stringify(collection);
-  const standardHeaders = ['Content-Type', 'Accept', 'X-Tableau-Auth', 'Authorization'];
+  const standardHeaders = ['Content-Type', 'Accept', 'Authorization', 'User-Agent', 'Host'];
   let customCount = 0;
   
   // Simple heuristic - count headers not in standard list
@@ -230,11 +230,72 @@ function estimateSemanticChanges(before, after) {
   return Math.abs(afterEndpoints - beforeEndpoints);
 }
 
-// Generate enhanced changelog
-const before = JSON.parse(fs.readFileSync(argv.before, 'utf8'));
-const after = JSON.parse(fs.readFileSync(argv.after, 'utf8'));
+// Enhanced logging
+function log(message, level = 'info') {
+  const timestamp = new Date().toISOString();
+  const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+  console.log(`${prefix} [${timestamp}] ${message}`);
+}
 
-const enhancedChangelog = generateEnhancedChangelog(before, after);
-fs.writeFileSync(argv.out, enhancedChangelog);
+// Safe file operations
+function readJSONFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    const content = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(content);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid JSON in file ${filePath}: ${error.message}`);
+    }
+    throw new Error(`Failed to read file ${filePath}: ${error.message}`);
+  }
+}
 
-console.log(`Enhanced semantic changelog written to ${argv.out}`);
+function writeFile(filePath, content) {
+  try {
+    const path = require('path');
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, content);
+    log(`Successfully wrote changelog to ${filePath}`);
+  } catch (error) {
+    throw new Error(`Failed to write file ${filePath}: ${error.message}`);
+  }
+}
+
+// Main execution with error handling
+async function runMain() {
+  try {
+    log('Starting enhanced semantic changelog generation...');
+    log(`Before: ${argv.before}`);
+    log(`After: ${argv.after}`);
+    log(`Output: ${argv.out}`);
+    
+    const before = readJSONFile(argv.before);
+    const after = readJSONFile(argv.after);
+    
+    log('Analyzing collection changes...');
+    const enhancedChangelog = generateEnhancedChangelog(before, after);
+    
+    writeFile(argv.out, enhancedChangelog);
+    
+    log('✅ Enhanced semantic changelog generated successfully');
+    process.exit(0);
+  } catch (error) {
+    log(`Changelog generation failed: ${error.message}`, 'error');
+    
+    if (process.env.DEBUG) {
+      console.error('\nStack trace:', error.stack);
+    } else {
+      log('Run with DEBUG=1 for detailed error information', 'info');
+    }
+    
+    process.exit(1);
+  }
+}
+
+runMain();
