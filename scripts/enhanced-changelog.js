@@ -186,10 +186,10 @@ function analyzePreservation(before, after) {
       after: countAuthConfigs(after), 
       preserved: countAuthConfigs(before) === countAuthConfigs(after)
     },
-    headers: { count: countCustomHeaders(after, before) },
-    descriptions: { count: countCustomDescriptions(after, before) },
+    headers: { count: countCustomHeaders(after) },
+    descriptions: { count: countCustomDescriptions(after) },
     semanticChanges: estimateSemanticChanges(before, after),
-    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after, before)
+    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after)
   };
 }
 
@@ -204,62 +204,53 @@ function countAuthConfigs(collection) {
 }
 
 function countCustomHeaders(after, before = null) {
-  if (!before) {
-    // Fallback: count obviously custom headers (X-, custom prefixes)
-    const content = JSON.stringify(after);
-    const customPatterns = [/X-[A-Za-z]/g, /Custom-/g, /Team-/g, /Internal-/g];
-    let customCount = 0;
-    customPatterns.forEach(pattern => {
-      customCount += (content.match(pattern) || []).length;
-    });
-    return customCount;
-  }
+  // Count curated headers in the final collection
+  // Focus on headers that are likely user-added, not standard API headers
+  const content = JSON.stringify(after);
+  const allHeaders = new Set();
   
-  // Better: count headers added since "before"
-  const beforeHeaders = new Set();
-  const afterHeaders = new Set();
-  
-  function extractHeaders(collection, headerSet) {
-    const content = JSON.stringify(collection);
-    const headerMatches = content.match(/"key":\s*"([^"]+)"/g) || [];
-    headerMatches.forEach(match => {
-      const header = match.match(/"key":\s*"([^"]+)"/)[1];
-      headerSet.add(header);
-    });
-  }
-  
-  extractHeaders(before, beforeHeaders);
-  extractHeaders(after, afterHeaders);
-  
-  // Count headers that exist in "after" but not in "before"
-  let addedHeaders = 0;
-  afterHeaders.forEach(header => {
-    if (!beforeHeaders.has(header)) addedHeaders++;
+  // Extract all headers from the collection
+  const headerMatches = content.match(/"key":\s*"([^"]+)"/g) || [];
+  headerMatches.forEach(match => {
+    const header = match.match(/"key":\s*"([^"]+)"/)[1];
+    allHeaders.add(header);
   });
   
-  return addedHeaders;
+  // Standard headers that are typically auto-generated
+  const standardHeaders = new Set([
+    'Accept', 'Accept-Encoding', 'Authorization', 'Content-Type', 
+    'Content-Length', 'Host', 'User-Agent', 'Cache-Control',
+    'Connection', 'Cookie', 'Referer', 'Origin'
+  ]);
+  
+  // Count headers that are likely user-curated
+  let curatedCount = 0;
+  allHeaders.forEach(header => {
+    // Count as curated if:
+    // 1. Has custom prefixes (X-, Custom-, Team-, etc.)
+    // 2. Not in standard headers list
+    // 3. Contains uppercase/mixed case (suggests manual entry)
+    const isCustomPrefix = /^(X-|Custom-|Team-|Internal-|App-)/i.test(header);
+    const isNonStandard = !standardHeaders.has(header);
+    const hasCustomPattern = /[A-Z]/.test(header) && header !== header.toLowerCase();
+    
+    if (isCustomPrefix || (isNonStandard && hasCustomPattern)) {
+      curatedCount++;
+    }
+  });
+  
+  return curatedCount;
 }
 
 function countCustomDescriptions(after, before = null) {
-  if (!before) {
-    // Fallback: count description delimiters only in description fields
-    const afterStr = JSON.stringify(after);
-    // Count "---" that appear within description strings, not anywhere in JSON
-    const descMatches = afterStr.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
-    return descMatches.length;
-  }
+  // Count descriptions with delimiter in the final collection
+  // This shows how many curated descriptions exist and were preserved
+  const content = JSON.stringify(after);
   
-  // Better: count descriptions with delimiters added since "before"
-  function countDescriptionsWithDelimiters(collection) {
-    const content = JSON.stringify(collection);
-    const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
-    return descMatches.length;
-  }
+  // Find all descriptions that contain the curation delimiter
+  const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
   
-  const beforeCount = countDescriptionsWithDelimiters(before);
-  const afterCount = countDescriptionsWithDelimiters(after);
-  
-  return Math.max(0, afterCount - beforeCount);
+  return descMatches.length;
 }
 
 function estimateSemanticChanges(before, after) {
