@@ -19,8 +19,8 @@ if (fs.existsSync('config/my-test.config.yaml')) {
   configFile = 'config/my-test.config.yaml';
 }
 
-// Auto-detect OpenAPI spec
-const openApiFiles = fs.readdirSync('openapi/').filter(f => 
+// Auto-detect OpenAPI spec (prioritize user files over demo files)
+let openApiFiles = fs.readdirSync('openapi/').filter(f => 
   f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json')
 );
 
@@ -30,7 +30,9 @@ if (openApiFiles.length === 0) {
   process.exit(1);
 }
 
-const specFile = `openapi/${openApiFiles[0]}`;
+// Prioritize user files (anything that's NOT a demo file)
+const userFiles = openApiFiles.filter(f => !f.startsWith('demo-'));
+const specFile = `openapi/${userFiles.length > 0 ? userFiles[0] : openApiFiles[0]}`;
 console.log(`📋 Using spec: ${specFile}`);
 
 // Auto-detect collection
@@ -82,8 +84,9 @@ async function main() {
     
     // Step 1: Convert OpenAPI to Postman
     const refFile = `ref/${path.basename(specFile, path.extname(specFile))}.postman_collection.json`;
+    // Use npx for better reliability with global installations
     await runCommand(
-      `openapi-to-postmanv2 -s "${specFile}" -o "${refFile}" -p`,
+      `npx openapi-to-postmanv2 -s "${specFile}" -o "${refFile}" -p`,
       'Converting OpenAPI spec to Postman collection'
     );
     
