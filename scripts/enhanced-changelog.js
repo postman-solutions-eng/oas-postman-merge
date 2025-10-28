@@ -243,12 +243,37 @@ function countCustomHeaders(after, before = null) {
   const beforeHeaders = extractHeaders(before);
   const afterHeaders = extractHeaders(after);
   
-  // Find headers that were preserved from the original (curated) collection
-  // These are headers that exist in both before and after, meaning they were in the original
-  // and were successfully preserved during the merge
+  // Standard headers that shouldn't count as "custom" even if preserved
+  const standardHeaders = new Set([
+    'Accept', 'Accept-Encoding', 'Accept-Language', 'Authorization', 
+    'Cache-Control', 'Connection', 'Content-Length', 'Content-Type', 
+    'Content-Encoding', 'Cookie', 'Date', 'ETag', 'Expires', 
+    'Host', 'If-Match', 'If-Modified-Since', 'If-None-Match',
+    'Last-Modified', 'Location', 'Origin', 'Referer', 'Server',
+    'Transfer-Encoding', 'User-Agent', 'Vary', 'WWW-Authenticate', 'Link'
+  ]);
+  
+  // Common API headers that shouldn't count as custom
+  const apiHeaders = new Set([
+    'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset',
+    'X-GitHub-Media-Type', 'X-GitHub-Enterprise-Version', 'X-OAuth-Scopes',
+    'X-CommonMarker-Version', 'X-Request-ID', 'X-Response-Time'
+  ]);
+  
+  // Find headers that were preserved AND are likely user-added
   const preservedCuratedHeaders = [];
   beforeHeaders.forEach(header => {
     if (afterHeaders.has(header)) {
+      // Skip standard HTTP headers
+      if (standardHeaders.has(header)) return;
+      
+      // Skip known API headers  
+      if (apiHeaders.has(header)) return;
+      
+      // Skip things that look like query parameters (lowercase, underscore)
+      if (/^[a-z_]+$/.test(header)) return;
+      
+      // What's left should be truly custom headers
       preservedCuratedHeaders.push(header);
     }
   });
