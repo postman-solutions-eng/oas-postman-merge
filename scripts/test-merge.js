@@ -31,13 +31,15 @@ if (openApiFiles.length === 0) {
 }
 
 // Prioritize user files (anything that's NOT a demo file)
-const userFiles = openApiFiles.filter(f => !f.startsWith('demo-'));
+// Look for user files - exclude exact demo filenames, not just demo- prefix
+const demoFiles = new Set(['demo-v1.yaml', 'demo-v1.yml', 'demo-v2.yaml', 'demo-v2.yml']);
+const userFiles = openApiFiles.filter(f => !demoFiles.has(f));
 const specFile = `openapi/${userFiles.length > 0 ? userFiles[0] : openApiFiles[0]}`;
 console.log(`📋 Using spec: ${specFile}`);
 
 // Auto-detect collection
 const collectionFiles = fs.readdirSync('collections/').filter(f => 
-  f.endsWith('.json') && !f.includes('merged') && !f.includes('working')
+  f.endsWith('.json') && !f.endsWith('.merged.json') && f !== 'working.json'
 );
 
 if (collectionFiles.length === 0) {

@@ -89,7 +89,9 @@ function readJSON(filePath) {
     const data = JSON.parse(content);
     
     // Validate if it looks like a Postman collection
-    if (filePath.includes('collection') || filePath.includes('working')) {
+    // Check for collection-like files more precisely
+    const fileName = path.basename(filePath).toLowerCase();
+    if (fileName.endsWith('.postman_collection.json') || fileName === 'working.json') {
       validateCollection(data, safePath);
     }
     
@@ -256,7 +258,7 @@ function mergeHeadersPreserveVars(newReq, oldReq) {
     const key = String(h.key || '').toLowerCase();
     const old = oldH[key];
     if (!old) return h;
-    const isVar = typeof old.value === 'string' && /\{\{.+\}\}/.test(old.value);
+    const isVar = typeof old.value === 'string' && /\{\{[^{}]+\}\}/.test(old.value);
     return isVar ? { ...h, value: old.value } : h;
   });
 }
@@ -325,7 +327,7 @@ function updateStructural(targetItem, refItem) {
   targetItem.request.header = nextReq.header ?? targetItem.request.header;
 
   // body
-  if (oldReq?.body?.mode === 'raw' && typeof oldReq.body.raw === 'string' && /\{\{.+\}\}/.test(oldReq.body.raw)) {
+  if (oldReq?.body?.mode === 'raw' && typeof oldReq.body.raw === 'string' && /\{\{[^{}]+\}\}/.test(oldReq.body.raw)) {
     targetItem.request.body = oldReq.body;
   } else {
     targetItem.request.body = nextReq.body ?? targetItem.request.body;

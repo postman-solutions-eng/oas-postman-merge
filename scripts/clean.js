@@ -88,7 +88,7 @@ console.log('\n📋 Your files (preserved):');
 ['openapi', 'collections', 'config'].forEach(dir => {
   if (fs.existsSync(dir)) {
     const files = fs.readdirSync(dir)
-      .filter(f => !f.includes('merged') && !f.includes('test-merge'))
+      .filter(f => !f.endsWith('.merged.json') && f !== 'test-merge.json')
       .filter(f => f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json'));
     
     if (files.length > 0) {
