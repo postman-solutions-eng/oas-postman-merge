@@ -290,8 +290,8 @@ function countCustomHeaders(after, before = null) {
       // Skip known API headers  
       if (apiHeaders.has(header)) return;
       
-      // Skip things that look like query parameters (lowercase, underscore)
-      if (/^[a-z_]+$/.test(header)) return;
+      // Note: No need for lowercase_underscore filter anymore since we now
+      // extract only from request.header[] (not query params/variables)
       
       // What's left should be truly custom headers
       preservedCuratedHeaders.push(header);
