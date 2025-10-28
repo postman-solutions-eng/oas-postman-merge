@@ -54,14 +54,33 @@ function generateEnhancedChangelog(before, after) {
     const preservation = analyzePreservation(before, after);
     output += `- **Test Scripts**: ${preservation.scripts.before} → ${preservation.scripts.after} (${preservation.scripts.preserved ? '✅ Preserved' : '❌ Changed'})\n`;
     output += `- **Auth Configs**: ${preservation.auth.before} → ${preservation.auth.after} (${preservation.auth.preserved ? '✅ Preserved' : '❌ Changed'})\n`;
-    output += `- **Custom Headers**: ${preservation.headers.count} preserved\n`;
-    output += `- **Custom Descriptions**: ${preservation.descriptions.count} with delimiters preserved\n`;
+    
+    // Verbose header reporting
+    if (preservation.headers.count > 0) {
+      output += `- **Custom Headers**: ${preservation.headers.count} preserved\n`;
+      if (preservation.headers.details.length > 0) {
+        output += `  - Found: ${preservation.headers.details.join(', ')}\n`;
+      }
+    } else {
+      output += `- **Custom Headers**: None detected\n`;
+    }
+    
+    // Verbose description reporting  
+    if (preservation.descriptions.count > 0) {
+      output += `- **Custom Descriptions**: ${preservation.descriptions.count} with delimiters preserved\n`;
+      if (preservation.descriptions.details.length > 0) {
+        output += `  - Locations: ${preservation.descriptions.details.join(', ')}\n`;
+      }
+    } else {
+      output += `- **Custom Descriptions**: None detected\n`;
+    }
     
     // NEW: Change Impact Analysis
     output += '\n## 📊 Change Impact\n';
     output += `- **Semantic changes**: ${apiChanges.added.length + apiChanges.removed.length + apiChanges.modified.length} meaningful API modifications\n`;
     output += `- **Format changes**: Ignored (XML↔JSON, whitespace, etc.)\n`;
-    output += `- **Curation impact**: Zero (${preservation.totalPreserved} items protected)\n`;
+    const totalCount = preservation.scripts.after + preservation.auth.after + preservation.headers.count + preservation.descriptions.count;
+    output += `- **Curation impact**: ${preservation.semanticChanges === 0 ? 'Zero' : 'Minimal'} (${totalCount} items protected)\n`;
   }
   
   return output;
@@ -186,10 +205,10 @@ function analyzePreservation(before, after) {
       after: countAuthConfigs(after), 
       preserved: countAuthConfigs(before) === countAuthConfigs(after)
     },
-    headers: { count: countCustomHeaders(after) },
-    descriptions: { count: countCustomDescriptions(after) },
+    headers: countCustomHeaders(after),
+    descriptions: countCustomDescriptions(after),
     semanticChanges: estimateSemanticChanges(before, after),
-    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after)
+    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after).count
   };
 }
 
@@ -204,8 +223,7 @@ function countAuthConfigs(collection) {
 }
 
 function countCustomHeaders(after, before = null) {
-  // Count curated headers in the final collection
-  // Focus on headers that are likely user-added, not standard API headers
+  // Count curated headers with detailed breakdown
   const content = JSON.stringify(after);
   const allHeaders = new Set();
   
@@ -216,41 +234,61 @@ function countCustomHeaders(after, before = null) {
     allHeaders.add(header);
   });
   
-  // Standard headers that are typically auto-generated
+  // Standard headers that are typically auto-generated or common
   const standardHeaders = new Set([
     'Accept', 'Accept-Encoding', 'Authorization', 'Content-Type', 
     'Content-Length', 'Host', 'User-Agent', 'Cache-Control',
-    'Connection', 'Cookie', 'Referer', 'Origin'
+    'Connection', 'Cookie', 'Referer', 'Origin', 'Accept-Language',
+    'Content-Encoding', 'Date', 'ETag', 'Expires', 'Last-Modified',
+    'Location', 'Server', 'Transfer-Encoding', 'Vary', 'WWW-Authenticate'
   ]);
   
-  // Count headers that are likely user-curated
-  let curatedCount = 0;
+  // Find headers that are likely user-curated
+  const curatedHeaders = [];
   allHeaders.forEach(header => {
-    // Count as curated if:
-    // 1. Has custom prefixes (X-, Custom-, Team-, etc.)
-    // 2. Not in standard headers list
-    // 3. Contains uppercase/mixed case (suggests manual entry)
-    const isCustomPrefix = /^(X-|Custom-|Team-|Internal-|App-)/i.test(header);
-    const isNonStandard = !standardHeaders.has(header);
-    const hasCustomPattern = /[A-Z]/.test(header) && header !== header.toLowerCase();
+    // Count as curated if has obvious custom prefixes
+    const isObviouslyCustom = /^(X-|Custom-|Team-|Internal-|App-|API-)/i.test(header);
     
-    if (isCustomPrefix || (isNonStandard && hasCustomPattern)) {
-      curatedCount++;
+    if (isObviouslyCustom) {
+      curatedHeaders.push(header);
     }
   });
   
-  return curatedCount;
+  return {
+    count: curatedHeaders.length,
+    details: curatedHeaders.sort()
+  };
 }
 
 function countCustomDescriptions(after, before = null) {
-  // Count descriptions with delimiter in the final collection
-  // This shows how many curated descriptions exist and were preserved
+  // Count descriptions with delimiter and show where they are
   const content = JSON.stringify(after);
   
-  // Find all descriptions that contain the curation delimiter
+  // Find descriptions with delimiters and extract context
   const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
+  const locations = [];
   
-  return descMatches.length;
+  // Try to find the context (what item/folder has the description)  
+  if (descMatches.length > 0) {
+    // Look for nearby "name" fields to identify what has curated descriptions
+    const fullMatches = content.match(/"name":\s*"([^"]+)"[^}]*"description":\s*"[^"]*---[^"]*"/g) || [];
+    fullMatches.forEach(match => {
+      const nameMatch = match.match(/"name":\s*"([^"]+)"/);
+      if (nameMatch) {
+        locations.push(nameMatch[1]);
+      }
+    });
+    
+    // Fallback: just show we found some without names
+    if (locations.length === 0 && descMatches.length > 0) {
+      locations.push(`${descMatches.length} item(s)`);
+    }
+  }
+  
+  return {
+    count: descMatches.length,
+    details: locations.slice(0, 5) // Limit to first 5 to avoid spam
+  };
 }
 
 function estimateSemanticChanges(before, after) {
