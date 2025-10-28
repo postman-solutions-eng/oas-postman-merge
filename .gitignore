@@ -7,11 +7,22 @@ npm-debug.log*
 *.env
 .env.local
 
-# generated reference collections (can always regenerate from specs)
+# generated artifacts (cleanup handles these, but good to ignore too)
 ref/
+*.merged.json
+CHANGELOG.*.md
 
-# merged artifact (only commit collections/working.json, not tmp outputs)
-collections/working.merged.json
+# user files (keep their private specs/collections out of git)  
+# NOTE: demo files (demo-*.yaml, working.json) are NOT ignored - they're part of the demo
+openapi/my-*
+openapi/user-*
+openapi/test-*
+collections/my-*
+collections/user-*  
+collections/test-*
+config/my-*
+config/user-*
+config/test-*
 
 # OS cruft
 .DS_Store
@@ -22,5 +33,3 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
-EOF
-test rename

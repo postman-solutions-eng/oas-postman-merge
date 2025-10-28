@@ -31,7 +31,10 @@ npm install
 
 ## ⚡ Quick Start
 
-> **Want to test with your own collections?** See our **[Testing Guide](TESTING.md)** for step-by-step instructions with real collections and specs.
+> **🧪 Want to test with your own collections?**  
+> See our **[Testing Guide](TESTING.md)** for a streamlined 5-minute test with real collections and specs.
+
+---
 
 ### 1. **Setup your files**
 ```bash
@@ -181,7 +184,7 @@ DEBUG=1 oas-postman-merge --config config/merge.config.yaml ...
 ```
 
 ### Testing with Your Own Collections
-- 🧪 **[Testing Guide](TESTING.md)** - Step-by-step guide for testing with real collections and specs
+- 🧪 **[Testing Guide](TESTING.md)** - 5-minute test with your own collections and specs
 
 ### Getting Help
 - 📖 **[Contributing Guide](CONTRIBUTING.md)** - Development and testing help
