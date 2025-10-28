@@ -194,32 +194,133 @@ function detectEndpointChanges(before, after) {
 
 function analyzePreservation(before, after) {
   // Analyze what curated content was preserved
+  const beforeScripts = countScripts(before);
+  const afterScripts = countScripts(after);
+  const beforeAuth = countAuthConfigs(before);
+  const afterAuth = countAuthConfigs(after);
+  
   return {
-    scripts: { 
-      before: countScripts(before), 
-      after: countScripts(after),
-      preserved: countScripts(before) === countScripts(after)
+    scripts: {
+      before: beforeScripts.count,
+      after: afterScripts.count,
+      preserved: beforeScripts.count === afterScripts.count,
+      details: afterScripts.details
     },
     auth: {
-      before: countAuthConfigs(before),
-      after: countAuthConfigs(after), 
-      preserved: countAuthConfigs(before) === countAuthConfigs(after)
+      before: beforeAuth.count,
+      after: afterAuth.count, 
+      preserved: beforeAuth.count === afterAuth.count,
+      details: afterAuth.details
     },
     headers: countCustomHeaders(after, before),
     descriptions: countCustomDescriptions(after, before),
     semanticChanges: estimateSemanticChanges(before, after),
-    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after, before).count
+    totalPreserved: afterScripts.count + afterAuth.count + countCustomHeaders(after, before).count
   };
 }
 
 function countScripts(collection) {
-  // Count pm.test instances as proxy for curated scripts
-  return (JSON.stringify(collection).match(/pm\.test/g) || []).length;
+  const scripts = [];
+  
+  function walkForScripts(items, path = []) {
+    if (!Array.isArray(items)) return;
+    
+    items.forEach(item => {
+      const currentPath = [...path, item.name].filter(Boolean);
+      
+      // Check item-level events (pre-request, test scripts)
+      if (item.event && Array.isArray(item.event)) {
+        item.event.forEach(event => {
+          if (event.script && event.script.exec && Array.isArray(event.script.exec)) {
+            const scriptContent = event.script.exec.join('\n');
+            const testCount = (scriptContent.match(/pm\.test/g) || []).length;
+            
+            if (testCount > 0) {
+              const isFolder = item.item && Array.isArray(item.item);
+              const itemType = isFolder ? 'Folder' : 'Request';
+              const pathStr = currentPath.length > 1 ? 
+                `${currentPath.slice(0, -1).join(' > ')} > ${itemType}: ${currentPath[currentPath.length - 1]}` :
+                `${itemType}: ${currentPath[0]}`;
+              
+              scripts.push(`${pathStr} > ${event.listen} script (${testCount} tests)`);
+            }
+          }
+        });
+      }
+      
+      // Recursively check nested items
+      if (item.item && Array.isArray(item.item)) {
+        walkForScripts(item.item, currentPath);
+      }
+    });
+  }
+  
+  // Check collection-level events
+  if (collection.event && Array.isArray(collection.event)) {
+    collection.event.forEach(event => {
+      if (event.script && event.script.exec && Array.isArray(event.script.exec)) {
+        const scriptContent = event.script.exec.join('\n');
+        const testCount = (scriptContent.match(/pm\.test/g) || []).length;
+        
+        if (testCount > 0) {
+          scripts.push(`Collection: ${collection.info?.name || 'Root'} > ${event.listen} script (${testCount} tests)`);
+        }
+      }
+    });
+  }
+  
+  // Check items
+  if (collection.item) {
+    walkForScripts(collection.item);
+  }
+  
+  return {
+    count: scripts.length,
+    details: scripts.slice(0, 5) // Limit to prevent spam
+  };
 }
 
 function countAuthConfigs(collection) {
-  // Count auth configurations
-  return (JSON.stringify(collection).match(/"auth":/g) || []).length;
+  const authConfigs = [];
+  
+  function walkForAuth(items, path = []) {
+    if (!Array.isArray(items)) return;
+    
+    items.forEach(item => {
+      const currentPath = [...path, item.name].filter(Boolean);
+      
+      // Check for item-level auth
+      if (item.auth && typeof item.auth === 'object' && item.auth.type) {
+        const isFolder = item.item && Array.isArray(item.item);
+        const itemType = isFolder ? 'Folder' : 'Request';
+        const pathStr = currentPath.length > 1 ? 
+          `${currentPath.slice(0, -1).join(' > ')} > ${itemType}: ${currentPath[currentPath.length - 1]}` :
+          `${itemType}: ${currentPath[0]}`;
+        
+        authConfigs.push(`${pathStr} > Auth: ${item.auth.type}`);
+      }
+      
+      // Recursively check nested items
+      if (item.item && Array.isArray(item.item)) {
+        walkForAuth(item.item, currentPath);
+      }
+    });
+  }
+  
+  // Check collection-level auth
+  if (collection.auth && typeof collection.auth === 'object' && collection.auth.type) {
+    authConfigs.push(`Collection: ${collection.info?.name || 'Root'} > Auth: ${collection.auth.type}`);
+  }
+  
+  // Check items
+  if (collection.item) {
+    walkForAuth(collection.item);
+  }
+  
+  return {
+    count: authConfigs.length,
+    details: authConfigs.slice(0, 5) // Limit to prevent spam
+  };
 }
 
 function countCustomHeaders(after, before = null) {
@@ -280,8 +381,49 @@ function countCustomHeaders(after, before = null) {
     'X-CommonMarker-Version', 'X-Request-ID', 'X-Response-Time'
   ]);
   
-  // Find headers that were preserved AND are likely user-added
+  // Find headers that were preserved AND are likely user-added, with locations
   const preservedCuratedHeaders = [];
+  
+  function findHeaderLocations(collection, targetHeaders) {
+    const locations = [];
+    
+    function walkForHeaders(items, path = []) {
+      if (!Array.isArray(items)) return;
+      
+      items.forEach(item => {
+        const currentPath = [...path, item.name].filter(Boolean);
+        
+        // Check if this item has headers we're tracking
+        if (item.request && item.request.header && Array.isArray(item.request.header)) {
+          item.request.header.forEach(header => {
+            if (header.key && targetHeaders.has(header.key)) {
+              const isFolder = item.item && Array.isArray(item.item);
+              if (!isFolder) {  // Only report for actual requests, not folders
+                const pathStr = currentPath.length > 1 ? 
+                  `${currentPath.slice(0, -1).join(' > ')} > Request: ${currentPath[currentPath.length - 1]}` :
+                  `Request: ${currentPath[0]}`;
+                locations.push(`${pathStr} > Header: ${header.key}`);
+              }
+            }
+          });
+        }
+        
+        // Recursively check nested items
+        if (item.item && Array.isArray(item.item)) {
+          walkForHeaders(item.item, currentPath);
+        }
+      });
+    }
+    
+    if (collection.item) {
+      walkForHeaders(collection.item);
+    }
+    
+    return locations;
+  }
+
+  // Get headers that were preserved
+  const preservedHeaderNames = new Set();
   beforeHeaders.forEach(header => {
     if (afterHeaders.has(header)) {
       // Skip standard HTTP headers
@@ -290,17 +432,18 @@ function countCustomHeaders(after, before = null) {
       // Skip known API headers  
       if (apiHeaders.has(header)) return;
       
-      // Note: No need for lowercase_underscore filter anymore since we now
-      // extract only from request.header[] (not query params/variables)
-      
       // What's left should be truly custom headers
+      preservedHeaderNames.add(header);
       preservedCuratedHeaders.push(header);
     }
   });
+
+  // Get detailed locations for the preserved headers
+  const headerLocations = findHeaderLocations(after, preservedHeaderNames);
   
   return {
     count: preservedCuratedHeaders.length,
-    details: preservedCuratedHeaders.sort()
+    details: headerLocations.slice(0, 10) // Limit to prevent spam
   };
 }
 

@@ -109,7 +109,7 @@ async function main() {
       'Generating semantic changelog'
     );
     
-    // Step 4: Normalize merged collection (internal step)
+    // Step 4: Normalize merged collection (cleanup step)
     await runCommand(
       `node scripts/normalize.js "${mergedFile}"`,
       'Normalizing merged collection for clean diffs'

@@ -225,7 +225,7 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					"// Enterprise logging and monitoring setup",
+					"// Production logging and monitoring setup",
 					"console.log('Pre-request script running for: ' + pm.request.name);"
 				]
 			}
