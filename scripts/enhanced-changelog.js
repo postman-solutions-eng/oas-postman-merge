@@ -186,10 +186,10 @@ function analyzePreservation(before, after) {
       after: countAuthConfigs(after), 
       preserved: countAuthConfigs(before) === countAuthConfigs(after)
     },
-    headers: { count: countCustomHeaders(after) },
-    descriptions: { count: countCustomDescriptions(after) },
+    headers: { count: countCustomHeaders(after, before) },
+    descriptions: { count: countCustomDescriptions(after, before) },
     semanticChanges: estimateSemanticChanges(before, after),
-    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after)
+    totalPreserved: countScripts(after) + countAuthConfigs(after) + countCustomHeaders(after, before)
   };
 }
 
@@ -203,24 +203,63 @@ function countAuthConfigs(collection) {
   return (JSON.stringify(collection).match(/"auth":/g) || []).length;
 }
 
-function countCustomHeaders(collection) {
-  // Count non-standard headers
-  const content = JSON.stringify(collection);
-  const standardHeaders = ['Content-Type', 'Accept', 'Authorization', 'User-Agent', 'Host'];
-  let customCount = 0;
+function countCustomHeaders(after, before = null) {
+  if (!before) {
+    // Fallback: count obviously custom headers (X-, custom prefixes)
+    const content = JSON.stringify(after);
+    const customPatterns = [/X-[A-Za-z]/g, /Custom-/g, /Team-/g, /Internal-/g];
+    let customCount = 0;
+    customPatterns.forEach(pattern => {
+      customCount += (content.match(pattern) || []).length;
+    });
+    return customCount;
+  }
   
-  // Simple heuristic - count headers not in standard list
-  const headerMatches = content.match(/"key":\s*"([^"]+)"/g) || [];
-  headerMatches.forEach(match => {
-    const header = match.match(/"key":\s*"([^"]+)"/)[1];
-    if (!standardHeaders.includes(header)) customCount++;
+  // Better: count headers added since "before"
+  const beforeHeaders = new Set();
+  const afterHeaders = new Set();
+  
+  function extractHeaders(collection, headerSet) {
+    const content = JSON.stringify(collection);
+    const headerMatches = content.match(/"key":\s*"([^"]+)"/g) || [];
+    headerMatches.forEach(match => {
+      const header = match.match(/"key":\s*"([^"]+)"/)[1];
+      headerSet.add(header);
+    });
+  }
+  
+  extractHeaders(before, beforeHeaders);
+  extractHeaders(after, afterHeaders);
+  
+  // Count headers that exist in "after" but not in "before"
+  let addedHeaders = 0;
+  afterHeaders.forEach(header => {
+    if (!beforeHeaders.has(header)) addedHeaders++;
   });
   
-  return customCount;
+  return addedHeaders;
 }
 
-function countCustomDescriptions(collection) {
-  return (JSON.stringify(collection).match(/---/g) || []).length;
+function countCustomDescriptions(after, before = null) {
+  if (!before) {
+    // Fallback: count description delimiters only in description fields
+    const afterStr = JSON.stringify(after);
+    // Count "---" that appear within description strings, not anywhere in JSON
+    const descMatches = afterStr.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
+    return descMatches.length;
+  }
+  
+  // Better: count descriptions with delimiters added since "before"
+  function countDescriptionsWithDelimiters(collection) {
+    const content = JSON.stringify(collection);
+    const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
+    return descMatches.length;
+  }
+  
+  const beforeCount = countDescriptionsWithDelimiters(before);
+  const afterCount = countDescriptionsWithDelimiters(after);
+  
+  return Math.max(0, afterCount - beforeCount);
 }
 
 function estimateSemanticChanges(before, after) {
