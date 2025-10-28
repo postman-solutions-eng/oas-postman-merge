@@ -254,18 +254,22 @@ function countCustomHeaders(after, before = null) {
     'X-Content-Type-Options', 'X-XSS-Protection', 'X-Forwarded-For'
   ]);
 
-  // Find headers that are truly user-curated (very specific patterns only)
+  // Find headers that are truly user-curated
   const curatedHeaders = [];
   allHeaders.forEach(header => {
-    // Only count headers with very specific custom business prefixes
-    const isTruelyCustom = /^(Custom-|Team-|Internal-|Company-|Org-|My-)/i.test(header);
-    
-    // Or X- headers that are NOT in the common API headers list
-    const isCustomXHeader = header.startsWith('X-') && !commonApiHeaders.has(header);
-    
-    if (isTruelyCustom || isCustomXHeader) {
-      curatedHeaders.push(header);
+    // Skip standard HTTP headers  
+    if (standardHeaders.has(header)) {
+      return;
     }
+    
+    // Skip known API standard headers
+    if (commonApiHeaders.has(header)) {
+      return;
+    }
+    
+    // Count everything else as potentially custom
+    // This catches business prefixes, unusual headers, etc.
+    curatedHeaders.push(header);
   });
   
   return {
@@ -301,9 +305,12 @@ function countCustomDescriptions(after, before = null) {
           
           // Check if this item has a description with ---
           if (item.description && item.description.includes('---')) {
+            const isFolder = item.item && Array.isArray(item.item);
+            const itemType = isFolder ? 'Folder' : 'Request';
+            
             const pathStr = currentPath.length > 1 ? 
-              currentPath.slice(0, -1).join(' > ') + ' > ' + currentPath[currentPath.length - 1] :
-              currentPath[0];
+              `${currentPath.slice(0, -1).join(' > ')} > ${itemType}: ${currentPath[currentPath.length - 1]}` :
+              `${itemType}: ${currentPath[0]}`;
             locations.push(pathStr);
           }
           
