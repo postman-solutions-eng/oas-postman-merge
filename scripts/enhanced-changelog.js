@@ -243,13 +243,27 @@ function countCustomHeaders(after, before = null) {
     'Location', 'Server', 'Transfer-Encoding', 'Vary', 'WWW-Authenticate'
   ]);
   
-  // Find headers that are likely user-curated
+  // Headers that look custom but are actually API standards
+  const commonApiHeaders = new Set([
+    // GitHub API standards
+    'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 
+    'X-GitHub-Media-Type', 'X-GitHub-Enterprise-Version', 'X-OAuth-Scopes',
+    'X-Accepted-OAuth-Scopes', 'X-Poll-Interval', 'X-CommonMarker-Version',
+    // Other common API patterns
+    'X-Request-ID', 'X-Response-Time', 'X-Powered-By', 'X-Frame-Options',
+    'X-Content-Type-Options', 'X-XSS-Protection', 'X-Forwarded-For'
+  ]);
+
+  // Find headers that are truly user-curated (very specific patterns only)
   const curatedHeaders = [];
   allHeaders.forEach(header => {
-    // Count as curated if has obvious custom prefixes
-    const isObviouslyCustom = /^(X-|Custom-|Team-|Internal-|App-|API-)/i.test(header);
+    // Only count headers with very specific custom business prefixes
+    const isTruelyCustom = /^(Custom-|Team-|Internal-|Company-|Org-|My-)/i.test(header);
     
-    if (isObviouslyCustom) {
+    // Or X- headers that are NOT in the common API headers list
+    const isCustomXHeader = header.startsWith('X-') && !commonApiHeaders.has(header);
+    
+    if (isTruelyCustom || isCustomXHeader) {
       curatedHeaders.push(header);
     }
   });
@@ -268,19 +282,44 @@ function countCustomDescriptions(after, before = null) {
   const descMatches = content.match(/"description":\s*"[^"]*---[^"]*"/g) || [];
   const locations = [];
   
-  // Try to find the context (what item/folder has the description)  
+  // Parse the collection structure to find where descriptions with --- exist
   if (descMatches.length > 0) {
-    // Look for nearby "name" fields to identify what has curated descriptions
-    const fullMatches = content.match(/"name":\s*"([^"]+)"[^}]*"description":\s*"[^"]*---[^"]*"/g) || [];
-    fullMatches.forEach(match => {
-      const nameMatch = match.match(/"name":\s*"([^"]+)"/);
-      if (nameMatch) {
-        locations.push(nameMatch[1]);
+    try {
+      const parsed = JSON.parse(content);
+      
+      // Check collection-level description
+      if (parsed.info && parsed.info.description && parsed.info.description.includes('---')) {
+        locations.push(`Collection: ${parsed.info.name || 'Root'}`);
       }
-    });
-    
-    // Fallback: just show we found some without names
-    if (locations.length === 0 && descMatches.length > 0) {
+      
+      // Recursively check items (requests/folders)
+      function findDescriptionsInItems(items, path = []) {
+        if (!Array.isArray(items)) return;
+        
+        items.forEach(item => {
+          const currentPath = [...path, item.name].filter(Boolean);
+          
+          // Check if this item has a description with ---
+          if (item.description && item.description.includes('---')) {
+            const pathStr = currentPath.length > 1 ? 
+              currentPath.slice(0, -1).join(' > ') + ' > ' + currentPath[currentPath.length - 1] :
+              currentPath[0];
+            locations.push(pathStr);
+          }
+          
+          // Recursively check nested items (folders)
+          if (item.item && Array.isArray(item.item)) {
+            findDescriptionsInItems(item.item, currentPath);
+          }
+        });
+      }
+      
+      if (parsed.item) {
+        findDescriptionsInItems(parsed.item);
+      }
+      
+    } catch (e) {
+      // Fallback if JSON parsing fails
       locations.push(`${descMatches.length} item(s)`);
     }
   }
