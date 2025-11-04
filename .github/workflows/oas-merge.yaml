@@ -99,12 +99,23 @@ jobs:
           mkdir -p ref
           echo "Converting OpenAPI specs to Postman collections..."
           
+          # Read folderOrganization option from config (default to "Paths" if not set)
+          folder_strategy="Paths"
+          if [ -f "config/merge.config.yaml" ]; then
+            folder_opt=$(grep -A 10 "^options:" config/merge.config.yaml | grep "folderOrganization:" | sed 's/.*folderOrganization: *"\([^"]*\)".*/\1/' | tr -d '"')
+            if [ ! -z "$folder_opt" ]; then
+              folder_strategy="$folder_opt"
+            fi
+          fi
+          
+          echo "Using folder organization strategy: $folder_strategy"
+          
           for f in openapi/*.*; do
             base=$(basename "$f")
             out="ref/${base%.*}.postman_collection.json"
-            echo "Converting $f → $out"
+            echo "Converting $f → $out (folder strategy: $folder_strategy)"
             
-            openapi2postmanv2 -s "$f" -o "$out" -p || {
+            openapi2postmanv2 -s "$f" -o "$out" -p -f "$folder_strategy" || {
               echo "❌ Failed to convert $f"
               exit 1
             }

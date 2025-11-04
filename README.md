@@ -50,8 +50,8 @@ config/merge.config.yaml
 
 ### 2. **Run the merge**
 ```bash
-# Generate a reference collection from your spec
-npx openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection.json -p
+# Generate a reference collection from your spec (with tags-based organization)
+npx openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection.json -p -f Tags
 
 # Merge preserving curated content
 oas-postman-merge --config config/merge.config.yaml \

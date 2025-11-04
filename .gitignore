@@ -12,6 +12,7 @@ package-lock.json  # Prevent lock file churn during user testing
 ref/
 *.merged.json
 CHANGELOG.*.md
+config/test-merge-temp.config.yaml
 
 # user files (keep their private specs/collections out of git)  
 # NOTE: demo files (demo-*.yaml, working.json) are NOT ignored - they're part of the demo

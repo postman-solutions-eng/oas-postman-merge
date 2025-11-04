@@ -1,0 +1,21 @@
+# Example configuration for tags-based folder organization
+# This creates a cleaner collection structure organized by OpenAPI tags
+# instead of deep URL path hierarchies
+
+services:
+  - name: "My API"
+    spec: "openapi/my-api.yaml"
+    workingFolder: []
+
+options:
+  preferOperationId: true
+  keepWorkingItemName: true
+  descriptionDelimiter: "\n---\n"
+  tagNew: "status:new"
+  retireMode: "move"
+  order: "keep"
+  
+  # Folder organization strategy for OpenAPI conversion
+  # "Tags" = organize by OpenAPI tags (Users, Orders, Auth, etc.)
+  # "Paths" = organize by URL paths (/api/users, /api/orders, etc.)
+  folderOrganization: "Tags"

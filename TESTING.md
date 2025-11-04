@@ -24,6 +24,9 @@ cp /path/to/your-collection.json collections/my-collection.json
 ### 3. Run the Test
 ```bash
 # This does everything automatically: detect files → convert → merge → changelog
+# ✅ Auto-detects your OpenAPI spec and collection files
+# ✅ Uses tags-based folder organization for cleaner structure  
+# ✅ No configuration files needed for testing
 npm run test-merge
 ```
 
@@ -130,13 +133,15 @@ options:
   tagNew: "status:new"                  # Tag for new endpoints
   retireMode: "move"                    # move | skip | delete for removed endpoints
   order: "keep"                         # keep | alpha for folder organization
+  folderOrganization: "Tags"            # "Tags" (cleaner) or "Paths" (URL structure)
 ```
 
 ### Manual Workflow (Alternative to npm run test-merge)
 ```bash
 # Step by step commands if you want more control
 mkdir -p ref
-openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection.json -p
+# Add -f Tags for cleaner organization, or -f Paths for URL-based structure
+openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection.json -p -f Tags
 node scripts/merge.js --config config/my-test.config.yaml --working collections/my-collection.json --refdir ref --out collections/my-collection.merged.json
 node scripts/enhanced-changelog.js --before collections/my-collection.json --after collections/my-collection.merged.json --out CHANGELOG.md
 ```

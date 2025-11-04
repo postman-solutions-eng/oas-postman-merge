@@ -13,11 +13,8 @@ if (fs.existsSync('ref')) {
   console.log('🧹 Cleaned up previous test artifacts\n');
 }
 
-// Simple config detection
-let configFile = 'config/merge.config.yaml';
-if (fs.existsSync('config/my-test.config.yaml')) {
-  configFile = 'config/my-test.config.yaml';
-}
+// Generate dynamic config based on auto-detected files (no static config needed)
+let dynamicConfig = null;
 
 // Auto-detect OpenAPI spec (prioritize user files over demo files)
 let openApiFiles = fs.readdirSync('openapi/').filter(f => 
@@ -52,7 +49,26 @@ if (collectionFiles.length === 0) {
 const collectionFile = `collections/${collectionFiles[0]}`;
 
 console.log(`📦 Using collection: ${collectionFile}`);
-console.log(`⚙️  Using config: ${configFile}\n`);
+
+// Create dynamic config based on auto-detected files
+const tempConfigFile = 'config/test-merge-temp.config.yaml';
+dynamicConfig = `services:
+  - name: "Test API"
+    spec: "${specFile}"
+    workingFolder: []
+
+options:
+  preferOperationId: true
+  keepWorkingItemName: true
+  descriptionDelimiter: "\\n---\\n"
+  tagNew: "status:new"
+  retireMode: "move"
+  order: "keep"
+  # Use tags-based organization for cleaner folder structure
+  folderOrganization: "Tags"
+`;
+
+console.log(`⚙️  Generated dynamic config for detected files\n`);
 
 // Run the workflow
 async function runCommand(cmd, description) {
@@ -82,18 +98,23 @@ async function main() {
       fs.mkdirSync('ref');
     }
     
+    // Write temporary config file
+    fs.writeFileSync(tempConfigFile, dynamicConfig);
+    console.log('📝 Created temporary config file\n');
+    
     // Step 1: Convert OpenAPI to Postman
     const refFile = `ref/${path.basename(specFile, path.extname(specFile))}.postman_collection.json`;
     // Use npx for better reliability with global installations
+    // Add folder strategy option (Tags = cleaner organization by functional area)
     await runCommand(
-      `npx openapi-to-postmanv2 -s "${specFile}" -o "${refFile}" -p`,
-      'Converting OpenAPI spec to Postman collection'
+      `npx openapi-to-postmanv2 -s "${specFile}" -o "${refFile}" -p -f Tags`,
+      'Converting OpenAPI spec to Postman collection (Tags organization)'
     );
     
     // Step 2: Run merge
     const mergedFile = collectionFile.replace('.json', '.merged.json');
     await runCommand(
-      `node scripts/merge.js --config "${configFile}" --working "${collectionFile}" --refdir ref --out "${mergedFile}"`,
+      `node scripts/merge.js --config "${tempConfigFile}" --working "${collectionFile}" --refdir ref --out "${mergedFile}"`,
       'Merging collections while preserving curation'
     );
     
@@ -127,6 +148,11 @@ async function main() {
   } catch (error) {
     console.log('❌ Test merge failed');
     process.exit(1);
+  } finally {
+    // Clean up temporary config file
+    if (fs.existsSync(tempConfigFile)) {
+      fs.unlinkSync(tempConfigFile);
+    }
   }
 }
 

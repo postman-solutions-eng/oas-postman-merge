@@ -10,3 +10,7 @@ options:
   tagNew: "status:new"
   retireMode: "move"
   order: "keep"
+  # Folder organization strategy for OpenAPI conversion
+  # "Paths" (default) = organize by URL paths (/api/users, /api/orders)  
+  # "Tags" = organize by OpenAPI tags (Users, Orders, Auth)
+  folderOrganization: "Paths"
