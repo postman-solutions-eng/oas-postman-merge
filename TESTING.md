@@ -140,8 +140,8 @@ options:
 ```bash
 # Step by step commands if you want more control
 mkdir -p ref
-# Add -f Tags for cleaner organization, or -f Paths for URL-based structure
-openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection.json -p -f Tags
+# Add folderStrategy=Tags for cleaner organization, or folderStrategy=Paths for URL-based structure
+openapi-to-postmanv2 -s openapi/my-api.yaml -o ref/my-api.postman_collection.json -p -O folderStrategy=Tags
 node scripts/merge.js --config config/my-test.config.yaml --working collections/my-collection.json --refdir ref --out collections/my-collection.merged.json
 node scripts/enhanced-changelog.js --before collections/my-collection.json --after collections/my-collection.merged.json --out CHANGELOG.md
 ```

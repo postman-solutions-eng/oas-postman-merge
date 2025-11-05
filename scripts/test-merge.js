@@ -107,7 +107,7 @@ async function main() {
     // Use npx for better reliability with global installations
     // Add folder strategy option (Tags = cleaner organization by functional area)
     await runCommand(
-      `npx openapi-to-postmanv2 -s "${specFile}" -o "${refFile}" -p -f Tags`,
+      `npx openapi-to-postmanv2 -s "${specFile}" -o "${refFile}" -p -O folderStrategy=Tags`,
       'Converting OpenAPI spec to Postman collection (Tags organization)'
     );
     

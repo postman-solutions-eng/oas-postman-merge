@@ -115,7 +115,7 @@ jobs:
             out="ref/${base%.*}.postman_collection.json"
             echo "Converting $f → $out (folder strategy: $folder_strategy)"
             
-            openapi2postmanv2 -s "$f" -o "$out" -p -f "$folder_strategy" || {
+            openapi2postmanv2 -s "$f" -o "$out" -p -O folderStrategy="$folder_strategy" || {
               echo "❌ Failed to convert $f"
               exit 1
             }
