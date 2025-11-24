@@ -138,6 +138,9 @@ function loadConfig(configPath) {
     
     const defaults = {
       services: [],
+      collection: {
+        targetFolder: '' // e.g., "Parent/Child" - empty = root level
+      },
       options: {
         preferOperationId: true,
         keepWorkingItemName: true,
@@ -148,11 +151,27 @@ function loadConfig(configPath) {
       }
     };
     
-    const config = { ...defaults, ...doc, options: { ...defaults.options, ...(doc.options || {}) } };
+    const config = { 
+      ...defaults, 
+      ...doc, 
+      collection: { ...defaults.collection, ...(doc.collection || {}) },
+      options: { ...defaults.options, ...(doc.options || {}) } 
+    };
     
     // Validate config
     if (!config.services || config.services.length === 0) {
       log('Warning: No services defined in config', 'warn');
+    }
+    
+    // Validate targetFolder if specified
+    if (config.collection && config.collection.targetFolder) {
+      const tf = config.collection.targetFolder;
+      if (typeof tf !== 'string') {
+        throw new Error('collection.targetFolder must be a string (e.g., "Parent/Child")');
+      }
+      if (tf.includes('..') || tf.includes('\0')) {
+        throw new Error('collection.targetFolder contains invalid characters');
+      }
     }
     
     return config;
@@ -213,6 +232,28 @@ function ensureFolder(parent, segments) {
     }
     node = next;
   }
+  return node;
+}
+
+// Find an existing folder by path (e.g., "Parent/Child")
+// Returns null if not found
+function findFolder(parent, pathString) {
+  if (!pathString || pathString.trim() === '') {
+    return parent; // Empty path = root level
+  }
+  
+  const segments = pathString.split('/').map(s => s.trim()).filter(s => s);
+  let node = parent;
+  
+  for (const seg of segments) {
+    node.item = node.item || [];
+    const next = node.item.find(x => x.item && x.name === seg);
+    if (!next) {
+      return null; // Folder not found
+    }
+    node = next;
+  }
+  
   return node;
 }
 
@@ -356,9 +397,30 @@ function main() {
 
   const working = readJSON(argv.working);
 
-  // map existing requests
+  // Determine merge root: target folder or collection root
+  let mergeRoot = working;
+  let targetFolderPath = cfg.collection?.targetFolder || '';
+  
+  if (targetFolderPath) {
+    log(`Looking for target folder: "${targetFolderPath}"`);
+    mergeRoot = findFolder(working, targetFolderPath);
+    
+    if (!mergeRoot) {
+      throw new Error(
+        `Target folder not found: "${targetFolderPath}"\n` +
+        `Please ensure the folder exists in your collection before running the merge.\n` +
+        `Tip: You can create it manually in Postman, or remove 'collection.targetFolder' from your config to merge at the root level.`
+      );
+    }
+    
+    log(`✅ Found target folder: "${targetFolderPath}"`);
+  } else {
+    log('Merging at collection root level');
+  }
+
+  // map existing requests (scoped to merge root)
   const workMap = new Map();
-  walkItems(working, (it) => workMap.set(reqKey(it), it));
+  walkItems(mergeRoot, (it) => workMap.set(reqKey(it), it));
 
   let updated = 0, added = 0, retired = 0;
 
@@ -368,7 +430,8 @@ function main() {
     if (!fs.existsSync(refPath)) { console.error(`Missing ref: ${refPath}`); continue; }
     const ref = readJSON(refPath);
 
-    const targetRoot = ensureFolder(working, asArray(svc.workingFolder || []));
+    // Use mergeRoot instead of working for scoped merges
+    const targetRoot = ensureFolder(mergeRoot, asArray(svc.workingFolder || []));
     const seen = new Set();
 
     // add/update
