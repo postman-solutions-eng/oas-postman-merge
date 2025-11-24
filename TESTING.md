@@ -136,6 +136,35 @@ options:
   folderOrganization: "Tags"            # "Tags" (cleaner) or "Paths" (URL structure)
 ```
 
+### Target Folder Merging
+**Merge into a specific folder instead of the collection root:**
+
+```yaml
+collection:
+  # Path to target folder (use "/" for nested folders)
+  # Example: "Tableau Cloud Manager REST API/Administrative Methods"
+  targetFolder: "Administrative Methods"
+
+services:
+  - name: "Admin API"
+    spec: "openapi/admin-api.yaml"
+    workingFolder: []  # empty = merge directly into targetFolder
+
+options:
+  # ... same options as above ...
+```
+
+**Why use target folders?**
+- ✅ Merge multiple specs into different sections of one collection
+- ✅ Keep other parts of your collection untouched
+- ✅ Retirement scoped to just the target folder
+- ✅ Perfect for monorepo API collections
+
+**Requirements:**
+- The target folder **must already exist** in your collection
+- Use Postman folder names exactly (case-sensitive)
+- Use `/` to separate nested folders (e.g., `"Parent/Child"`)
+
 ### Manual Workflow (Alternative to npm run test-merge)
 ```bash
 # Step by step commands if you want more control

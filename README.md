@@ -116,10 +116,15 @@ scripts/changelog.js            # Added/Retired summary
 ## Config Example
 
 ```yaml
+# Optional: Merge into a specific folder instead of collection root
+collection:
+  targetFolder: "API v2"  # Leave empty for root-level merge
+
 services:
   - name: "Demo"
     spec: "openapi/demo.yaml"
-    workingFolder: ["sites"]
+    workingFolder: ["sites"]  # Subfolder within targetFolder
+    
 options:
   keepWorkingItemName: true
   descriptionDelimiter: "\n---\n"
@@ -127,6 +132,8 @@ options:
   retireMode: "move"   # move | skip | delete
   order: "keep"
 ```
+
+**Target Folder Merging**: Perfect for merging multiple specs into different sections of one collection. Retirement and updates are scoped to just that folder. See [TESTING.md](TESTING.md#target-folder-merging) for details.
 
 ---
 

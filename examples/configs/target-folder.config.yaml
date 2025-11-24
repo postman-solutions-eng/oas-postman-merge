@@ -1,0 +1,24 @@
+# Example: Merge into a specific folder within your collection
+# Use this when you want to merge OAS content into a subfolder
+# instead of the collection root
+
+collection:
+  # Path to the target folder (use "/" to separate nested folders)
+  # Example: "Tableau Cloud Manager REST API/Administrative Methods"
+  # Leave empty or omit to merge at collection root
+  targetFolder: "Administrative Methods"
+
+services:
+  - name: "Admin API"
+    spec: "openapi/admin-api.yaml"
+    workingFolder: []  # empty = merge directly into targetFolder
+
+options:
+  preferOperationId: true
+  keepWorkingItemName: true
+  descriptionDelimiter: "\n---\n"
+  tagNew: "status:new"
+  retireMode: "move"
+  order: "keep"
+  folderOrganization: "Tags"  # Use tags for folder structure
+
