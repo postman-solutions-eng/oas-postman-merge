@@ -186,6 +186,8 @@ function loadConfig(configPath) {
 // Normalize a URL to "path/with/:vars" (no leading slash)
 function getNormalizedPathFromUrl(urlLike) {
   if (!urlLike) return '';
+  
+  // Handle string URLs
   if (typeof urlLike === 'string') {
     try {
       const u = new URL(urlLike, 'http://dummy');
@@ -194,13 +196,40 @@ function getNormalizedPathFromUrl(urlLike) {
       return urlLike.replace(/^\//, '');
     }
   }
+  
   const u = urlLike;
+  
+  // FIX 1: Prioritize path array (more reliable and consistent)
+  // Path array exists in both working and reference collections and is clean
+  // (doesn't contain protocol, host, or Postman variables in the path structure)
+  const pathArr = Array.isArray(u.path) ? u.path : [];
+  if (pathArr.length > 0) {
+    // FIX 2: Normalize path parameters and variables for matching
+    // Working collection may use {{varName}} while ref uses :paramName
+    // Both should match as they represent the same path structure
+    const normalizedPath = pathArr
+      .map(segment => {
+        // Replace {{varName}} with :param
+        if (/^\{\{[^}]+\}\}$/.test(segment)) {
+          return ':param';
+        }
+        // Replace :paramName with :param
+        if (/^:[a-zA-Z0-9_-]+$/.test(segment)) {
+          return ':param';
+        }
+        return segment;
+      })
+      .join('/');
+    return normalizedPath.replace(/^\//, '');
+  }
+  
+  // Fallback to raw field only if path array is empty
   if (u.raw) {
     const raw = u.raw.replace(/^[a-z]+:\/\/[^/]+/i, '');
     return raw.replace(/^\//, '').split('?')[0];
   }
-  const pathArr = Array.isArray(u.path) ? u.path : [];
-  return pathArr.join('/').replace(/^\//, '');
+  
+  return '';
 }
 
 // Build a stable key for request matching
@@ -324,17 +353,41 @@ function mergeUrlPreserveShape(targetReq, refReq) {
   const o = deepClone(oldUrl);
   const n = newUrl || {};
 
-  // path
+  // FIX 3: Preserve custom Postman variables in path segments
+  // Map old path segments to preserve variables
+  const oldPathMap = new Map();
   if (Array.isArray(o.path)) {
-    if (Array.isArray(n.path)) o.path = n.path;
+    o.path.forEach((segment, idx) => {
+      if (/^\{\{[^}]+\}\}$/.test(segment)) {
+        oldPathMap.set(idx, segment);
+      }
+    });
+  }
+
+  // path: update structure but preserve Postman variables
+  if (Array.isArray(o.path)) {
+    if (Array.isArray(n.path)) {
+      // Use new path structure but restore Postman variables at their positions
+      o.path = n.path.map((segment, idx) => {
+        if (oldPathMap.has(idx)) {
+          return oldPathMap.get(idx);
+        }
+        return segment;
+      });
+    }
     else if (typeof n.raw === 'string') o.path = n.raw.split('?')[0].replace(/^[^/]*:\/\//,'').split('/').slice(1);
   } else if (typeof o.path === 'string') {
     if (Array.isArray(n.path)) o.path = n.path.join('/');
     else if (typeof n.raw === 'string') o.path = n.raw.split('?')[0].replace(/^[^/]*:\/\//,'').split('/').slice(1).join('/');
   }
 
-  // host
-  if (Array.isArray(n.host) && n.host.length) o.host = n.host;
+  // FIX 3: Preserve custom Postman variables in host
+  // host: preserve if old host contains Postman variables
+  const oldHasVars = Array.isArray(o.host) && o.host.some(h => /\{\{[^}]+\}\}/.test(h));
+  if (!oldHasVars && Array.isArray(n.host) && n.host.length) {
+    o.host = n.host;
+  }
+  // else: keep old host (preserves custom Postman variables like {{tcmBaseUrl}})
 
   // variables & query
   if (Array.isArray(n.variable)) o.variable = n.variable;

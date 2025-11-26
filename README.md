@@ -89,6 +89,7 @@ jobs:
 - Reference is merged into your working collection:
   - Updates only structural fields (method, URL, params, body).
   - Preserves curated content (auth, scripts, names, doc links).
+  - **Preserves custom Postman variables** (e.g., `{{myCustomVar}}`).
   - New endpoints tagged `status:new`.
   - Removed endpoints moved to `_retired`.
 - A changelog (`CHANGELOG.md`) lists **Added** and **Retired** endpoints.
@@ -147,6 +148,7 @@ options:
 
 ### The Solution  
 - ✅ **Preserve curation** - Auth, scripts, headers, and docs stay intact
+- ✅ **Preserve custom variables** - Your `{{customVar}}` syntax is maintained
 - ✅ **Semantic diffs** - See actual API changes, not formatting noise  
 - ✅ **Automated workflow** - CI/CD keeps collections in sync without manual work
 - ✅ **Safe archives** - Removed endpoints go to `_retired` folder, not deleted
