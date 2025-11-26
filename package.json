@@ -10,7 +10,7 @@
   "scripts": {
     "merge": "node scripts/merge.js --config config/merge.config.yaml --working examples/demo/working.json --refdir ref --out collections/working.merged.json",
     "changelog": "node scripts/enhanced-changelog.js --before examples/demo/working.json --after collections/working.merged.json --out CHANGELOG.md",
-    "test": "echo \"Tests coming soon - see GitHub Issues\" && exit 0",
+    "test": "node test/postman-variables.test.js",
     "normalize": "node scripts/normalize.js",
     "demo": "npm run merge && npm run changelog",
     "test-merge": "node scripts/test-merge.js",

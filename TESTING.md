@@ -76,7 +76,7 @@ So you can compare results across different API versions! 📊
 **That's it!** 🎉 The tool automatically:
 - Detects your OpenAPI spec and collection
 - Converts the spec to Postman format  
-- Merges while preserving your auth, scripts, and headers
+- Merges while preserving your auth, scripts, headers, and **custom Postman variables**
 - Generates a human-readable changelog
 - Normalizes the output for clean diffs
 
