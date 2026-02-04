@@ -11,42 +11,43 @@ When an OpenAPI spec changes, it automatically:
 
 ---
 
-## Quick Start: Try the Demo
+## Setup (Do This First)
 
-### Step 1: Fork the Collection in Postman
+### 1. Clone the Repo
 
-1. Go to the **Demo API** collection in the team workspace
-2. Click the `•••` menu → **Create a fork**
-3. Name it something like "Demo API - [Your Name]"
-4. This is YOUR copy to safely test with
+```bash
+git clone git@github.com:postman-solutions-eng/oas-postman-merge.git
+cd oas-postman-merge
+npm install
+```
 
-### Step 2: Watch the Magic Happen
+### 2. Import the Demo Collection into Postman
 
-We'll simulate an API change. Here's what to look for:
+1. Open Postman
+2. Click **Import** (top left)
+3. Select the file: `examples/demo/working.json` from the cloned repo
+4. Choose which workspace to import into (or create a new one)
+5. Click **Import**
 
-1. **Check the repo:** https://github.com/postman-solutions-eng/oas-postman-merge
-2. **Look at the OpenAPI spec:** `openapi/demo-v2.yaml`
-3. **When someone pushes a change** → a PR appears automatically
+You should now see **"Demo API"** in your Postman workspace.
 
-### Step 3: Review the PR
+### 3. (Optional) Fork the Collection
 
-The auto-generated PR shows:
-- 📝 **Changelog** in the PR description (what endpoints changed)
-- 📊 **Diff** of the collection JSON
+If you want your own copy to experiment with:
 
-### Step 4: After PR Merges
-
-1. The main collection updates in Postman automatically
-2. **In YOUR fork:** Click **Pull changes** to see what changed
-3. Review the diff before accepting
+1. Right-click the **Demo API** collection
+2. Click **Create a fork**
+3. Name it "Demo API - [Your Name]"
 
 ---
 
-## Try It Yourself
+## Quick Start: Try the Demo
 
-### Make a Test Change
+### Step 1: Make a Change to the OpenAPI Spec
 
-Edit `openapi/demo-v2.yaml` and add a new endpoint:
+Edit `openapi/demo-v2.yaml` — add a new endpoint, modify a parameter, or remove something.
+
+Example — add this under `paths:`:
 
 ```yaml
   /sites/{siteId}/test-endpoint:
@@ -62,7 +63,34 @@ Edit `openapi/demo-v2.yaml` and add a new endpoint:
         "200": { description: ok }
 ```
 
-Push it to a branch → create PR → watch the workflow run!
+### Step 2: Push and Watch
+
+```bash
+git checkout -b my-test-change
+git add openapi/demo-v2.yaml
+git commit -m "test: add new endpoint"
+git push -u origin my-test-change
+```
+
+Then go to GitHub and create a PR. The workflow will:
+1. ✅ Validate the OpenAPI spec
+2. ✅ Run the merge
+3. ✅ Create an auto-PR with the merged collection
+
+### Step 3: Review the Auto-PR
+
+The workflow creates a second PR (targeting `main`) with:
+- 📝 **Changelog** in the PR description (what endpoints changed)
+- 📊 **Diff** of the collection JSON
+
+### Step 4: Merge and Publish
+
+When you merge the auto-PR to `main`:
+1. The **publish** job runs automatically
+2. The collection updates in Postman within seconds
+3. Check Postman — your changes are live!
+
+**If you forked the collection:** Click **Pull changes** in Postman to see what changed.
 
 ---
 
@@ -102,24 +130,21 @@ When the merge runs, YOUR customizations are kept:
 
 ## Local Testing (Optional)
 
-If you want to test locally:
+You can also run the merge locally without pushing to GitHub:
 
 ```bash
-# Clone the repo
-git clone git@github.com:postman-solutions-eng/oas-postman-merge.git
-cd oas-postman-merge
-
-# Install dependencies
-npm install
-
-# Run the merge locally
+# Run the merge
 npm run merge
 
 # See the changelog
 cat CHANGELOG.md
 
-# Dry-run publish (no changes made)
+# Dry-run publish (validates but doesn't push to Postman)
 npm run publish:test
+
+# Actually publish to Postman
+npm run setup:publish   # First time: configure your target collection
+npm run publish         # Push to Postman
 ```
 
 ---
