@@ -31,7 +31,26 @@ npm install
 
 You should now see **"Demo API"** in your Postman workspace.
 
-### 3. (Optional) Fork the Collection
+### 3. Configure GitHub Secrets (Required for Auto-Publish)
+
+For the workflow to publish to Postman, add these to your GitHub repo:
+
+**Add Secret:** https://github.com/postman-solutions-eng/oas-postman-merge/settings/secrets/actions
+| Name | Value |
+|------|-------|
+| `POSTMAN_API_KEY` | Your Postman API key ([get one here](https://go.postman.co/settings/me/api-keys)) |
+
+**Add Variable:** https://github.com/postman-solutions-eng/oas-postman-merge/settings/variables/actions
+| Name | Value |
+|------|-------|
+| `WORKING_COLLECTION_UID` | The UID of your imported collection (see below) |
+
+**To get the Collection UID:**
+1. In Postman, click your **Demo API** collection
+2. Click the `ⓘ` info icon (or right-click → View Details)
+3. Copy the **Collection UID** (format: `12345678-abcd-1234-...`)
+
+### 4. (Optional) Fork the Collection
 
 If you want your own copy to experiment with:
 
