@@ -41,3 +41,4 @@ paths:
                 principals: { type: array, items: { type: string } }
                 capability: { type: string }
       responses: { "204": { description: shared } }# trigger14
+
