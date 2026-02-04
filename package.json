@@ -14,7 +14,10 @@
     "normalize": "node scripts/normalize.js",
     "demo": "npm run merge && npm run changelog",
     "test-merge": "node scripts/test-merge.js",
-    "clean": "node scripts/clean.js"
+    "clean": "node scripts/clean.js",
+    "setup:publish": "node scripts/setup-publish.js",
+    "publish": "node scripts/publish.js --collection collections/working.merged.json",
+    "publish:test": "node scripts/publish.js --collection collections/working.merged.json --dry-run"
   },
   "keywords": [
     "openapi",

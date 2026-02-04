@@ -81,6 +81,28 @@ jobs:
       # Creates PR with changes + optional publish to Postman
 ```
 
+### 4. **Publish to Postman (Step 2)**
+
+After merging, automatically push your collection back to Postman:
+
+```bash
+# Quick setup with interactive wizard
+npm run setup:publish
+
+# Test locally (dry run)
+npm run publish:test
+
+# Publish to Postman
+npm run publish
+```
+
+The wizard walks you through:
+1. 🔑 Validating your Postman API key
+2. 📂 Selecting your target collection
+3. ⚙️ Configuring GitHub Actions secrets
+
+> 📖 **Full setup guide:** [PUBLISHING.md](PUBLISHING.md)
+
 ---
 
 ## How It Works
