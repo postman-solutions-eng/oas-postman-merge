@@ -202,6 +202,7 @@ jobs:
           title: "🔄 OAS merge: update Working collection"
           body-path: CHANGELOG.md
           branch: oas-merge/update-working
+          base: main
           add-paths: |
             collections/working.json
             CHANGELOG.md
