@@ -1,6 +1,6 @@
 # Testing the OAS → Postman Auto-Merge
 
-Welcome testers! This guide walks you through testing the automated OpenAPI-to-Postman merge workflow.
+This guide walks you through testing the automated OpenAPI-to-Postman merge workflow.
 
 ## What This Tool Does
 
