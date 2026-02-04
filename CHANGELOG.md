@@ -2,11 +2,7 @@
 
 ## 🔄 API Evolution
 
-### ➕ **Added Endpoints**
-- `POST /sites/{siteId}/custom-views/{customViewId}/share` - share Custom View
-
-### 🔄 **Modified Endpoints**
-- `GET /sites/{siteId}/custom-views` - added query params: includeSubsites
+No structural API changes detected.
 
 ## ✅ Preserved Curated Content
 - **Test Scripts**: 2 → 2 (✅ Preserved)
@@ -19,6 +15,6 @@
   - Locations: Collection: Demo API, Folder: sites, sites > {siteId} > Folder: custom-views, sites > {siteId} > Folder: legacyTokens
 
 ## 📊 Change Impact
-- **Semantic changes**: 2 meaningful API modifications
+- **Semantic changes**: 0 meaningful API modifications
 - **Format changes**: Ignored (XML↔JSON, whitespace, etc.)
-- **Curation impact**: Minimal (10 items protected)
+- **Curation impact**: Zero (10 items protected)
