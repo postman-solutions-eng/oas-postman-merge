@@ -185,7 +185,6 @@
                               },
                               "raw": "{\n  \"principals\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"capability\": \"<string>\"\n}"
                             },
-                            "description": {},
                             "header": [
                               {
                                 "key": "Content-Type",
