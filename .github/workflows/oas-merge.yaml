@@ -23,6 +23,7 @@ jobs:
   # Validate inputs and run security checks
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     outputs:
       should-merge: ${{ steps.check-changes.outputs.should-merge }}
     steps:
@@ -80,6 +81,7 @@ jobs:
     needs: validate
     if: needs.validate.outputs.should-merge == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
@@ -214,6 +216,7 @@ jobs:
     # Only run when merging PR (detected by commit message) on main/video-demo branches  
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/video-demo') && contains(github.event.head_commit.message, 'OAS merge:')
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
